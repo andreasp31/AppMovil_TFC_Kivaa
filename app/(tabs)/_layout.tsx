@@ -1,35 +1,123 @@
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Map, Heart, MessageSquare, User } from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
+import { Image, View, StyleSheet, Text } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: '#FAD934', 
+        tabBarInactiveTintColor: '#9BA1A6',
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF', 
+          borderWidth: 1,
+          borderColor:"#212121",
+          height: 60,
+          margin:15,
+          borderRadius:80,
+          paddingTop:10
+        },
+        headerShown: false, // Para que no salga el título arriba
       }}>
       <Tabs.Screen
-        name="index"
+        name="PantallaFavoritos"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Favoritos',
+          tabBarIcon: ({ focused }) => (
+            <Image 
+              source={require('../../assets/images/logoFavoritos.png')} 
+              style={{ 
+                width: 30,
+                height: 30, 
+                resizeMode: 'contain' 
+              }} 
+            />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="PantallaPrincipal"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ focused }) => (
+            <View style={[
+              styles.iconoContenedor, 
+              focused && styles.iconoContenedorActivo
+            ]}>
+              <Image 
+                source={require('../../assets/images/logoPrincipal.png')} 
+                style={{ 
+                  paddingTop:  focused ? 10 : 0,
+                  width: focused ? 20 : 30, 
+                  height: focused ? 20 : 30, 
+                }} 
+              />
+              {focused && <Text style={styles.textoActivado}>Home</Text>}
+            </View>
+          ),
         }}
       />
+      <Tabs.Screen
+        name="PantallaResena"
+        options={{
+          title: 'Opiniones',
+          tabBarIcon: ({ focused }) => (
+            <Image 
+              source={require('../../assets/images/logoResenat.png')} 
+              style={{ 
+                width: 30,
+                height: 30, 
+                resizeMode: 'contain' 
+              }} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaRegistro"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaInicio"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaHome"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconoContenedor:{
+    display:"flex",
+    flexDirection:"row",
+    gap:10,
+    width:40,
+    alignItems:"center",
+    justifyContent:"center"
+  },
+  iconoContenedorActivo:{
+    backgroundColor: '#FAD934',
+    width:120,
+    borderRadius:20,
+    height:40
+  },
+  textoActivado:{
+    fontWeight:"bold"
+  }
+})
