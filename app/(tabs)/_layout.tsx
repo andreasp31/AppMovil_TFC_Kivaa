@@ -9,10 +9,10 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#FAD934', 
-        tabBarInactiveTintColor: '#9BA1A6',
+        tabBarInactiveTintColor: '#ffffffff',
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF', 
+          backgroundColor: '#ffffffff', 
           borderWidth: 1,
           borderColor:"#212121",
           height: 60,
@@ -27,14 +27,20 @@ export default function TabLayout() {
         options={{
           title: 'Favoritos',
           tabBarIcon: ({ focused }) => (
+            <View style={[
+              styles.iconoContenedor, 
+              focused && styles.iconoContenedorActivo1
+            ]}>
             <Image 
               source={require('../../assets/images/logoFavoritos.png')} 
               style={{ 
-                width: 30,
-                height: 30, 
-                resizeMode: 'contain' 
+                paddingTop:  focused ? 10 : 0,
+                width: focused ? 20 : 30, 
+                height: focused ? 20 : 30,
               }} 
             />
+            {focused && <Text style={styles.textoActivado}>Favoritos</Text>}
+            </View>
           ),
         }}
       />
@@ -65,14 +71,20 @@ export default function TabLayout() {
         options={{
           title: 'Opiniones',
           tabBarIcon: ({ focused }) => (
+            <View style={[
+              styles.iconoContenedor, 
+              focused && styles.iconoContenedorActivo2
+            ]}>
             <Image 
               source={require('../../assets/images/logoResenat.png')} 
               style={{ 
-                width: 30,
-                height: 30, 
-                resizeMode: 'contain' 
+                paddingTop:  focused ? 10 : 0,
+                width: focused ? 20 : 30, 
+                height: focused ? 20 : 30,  
               }} 
             />
+            {focused && <Text style={styles.textoActivado}>Reseñas</Text>}
+            </View>
           ),
         }}
       />
@@ -116,6 +128,20 @@ const styles = StyleSheet.create({
     width:120,
     borderRadius:20,
     height:40
+  },
+  iconoContenedorActivo1:{
+    backgroundColor: '#FAD934',
+    width:120,
+    borderRadius:20,
+    height:40,
+    marginLeft:20
+  },
+  iconoContenedorActivo2:{
+    backgroundColor: '#FAD934',
+    width:120,
+    borderRadius:20,
+    height:40,
+    marginRight:20
   },
   textoActivado:{
     fontWeight:"bold"
