@@ -29,7 +29,7 @@ export default function HomeScreen() {
           
         }
         else{
-          
+          router.push('/PantallaPrincipal');
         }
       }
       //El any es para decirle a typescript que se lo que estoy haciendo al llamar error, que sino me da problemas
@@ -79,11 +79,11 @@ export default function HomeScreen() {
         <TextInput style={styles.input} placeholder='Introduce un correo' autoCapitalize='none' value={email} onChangeText={ponerEmail} keyboardType="email-address"></TextInput>
         <Text style={styles.texto}>Contraseña</Text>
         <TextInput style={styles.input} placeholder='Introduce una contraseña' autoCapitalize='none' value={clave} onChangeText={ponerClave} secureTextEntry={true}></TextInput>
-        {errorMensaje ? <Text style={{color: 'red', marginTop: 10}}>{errorMensaje}</Text> : null}
       </View>
       <View style={styles.container2}>
+        {errorMensaje ? <Text style={styles.mensajeError}>{errorMensaje}</Text> : null}
         <Text style={styles.texto}>Olvidaste tu contraseña?</Text>
-        <KivaaBoton titulo="Iniciar Sesión" onPress={() => router.push("/PantallaHome")}></KivaaBoton>
+        <KivaaBoton titulo="Iniciar Sesión" onPress={login}></KivaaBoton>
         <Text style={styles.texto}>Si no tienes cuenta, <Text style={styles.textoEnlace}>regístrate </Text></Text>
         <Image source={require('@/assets/images/separacion.png')} style={styles.icono3}></Image>
         <TouchableOpacity style={styles.botonGoogle}>
@@ -125,6 +125,11 @@ const styles = StyleSheet.create({
     width:300,
     height:50,
     paddingLeft:15,
+  },
+  mensajeError:{
+    color: "red", 
+    marginBottom: 10,
+    alignSelf:"center"
   },
   container2: {
     flex: 1,

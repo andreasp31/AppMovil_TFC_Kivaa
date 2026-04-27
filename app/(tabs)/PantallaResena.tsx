@@ -10,17 +10,14 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.containerFotos}>
+      <View style= {styles.containerCabecera}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
+        <View style={styles.contenedorCuenta}>
+          <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
+          <Text style={styles.textoDescripcion}>Nombre</Text>
+        </View>
       </View>
-      <View style={styles.textos}>
-        <Text style={styles.titulos}>Todas tus comidas favoritas</Text>
-        <Text style={styles.textoDescripcion}>Descubre nuevos sitios <Text style={styles.textoBold}>Sin Gluten</Text> cerca de ti!</Text>
-      </View>
-      <View style={styles.container2}>
-        <KivaaBoton titulo="Iniciar Sesión" onPress={() => router.push("/PantallaInicio")}></KivaaBoton>
-        <KivaaBoton titulo="Registrarse" type="secondary" onPress={() => router.push("/PantallaRegistro")}></KivaaBoton>
-      </View>
+      <Text style={styles.titulos}>Mis Reseñas</Text>
     </View>  
   );
 }
@@ -37,16 +34,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop:10
   },
+  containerCabecera:{
+    display:"flex",
+    flexDirection:"row",
+    gap:160,
+    marginTop:60
+  },
+  contenedorCuenta:{
+    display:"flex",
+    flexDirection:"column",
+    gap:5
+  },
+  contenedorIconos:{
+    display:"flex",
+    flexDirection:"column",
+    alignItems:"center",
+    gap:4
+  },
+  containerMenu:{
+    display:"flex",
+    flexDirection:"row",
+    gap:20,
+    marginTop:20
+  },
   textos:{
     display:"flex",
     flexDirection:"column",
-    justifyContent:"center",
-    alignItems:"center",
-    marginLeft:30, 
-    marginRight:30, 
-    textAlign:"center",
+    justifyContent:"flex-start", 
+    marginTop:20,
+    textAlign:"left",
     color:"black",
-    gap:10
+    gap:5
   },
   miTextoBoton:{
     color:"#110501",
@@ -54,12 +72,22 @@ const styles = StyleSheet.create({
   textoDescripcion: {
     textAlign: "center", 
     color:"#110501",     
+    fontSize: 12,
+    marginBottom: 5,    
+  },
+  textoDescripcion2: {
+    textAlign: "center", 
+    color:"#110501",     
     fontSize: 14,
     marginBottom: 5,    
   },
+  icono:{
+    height:50,
+    width:50
+  },
   foto: {
-    height: 100,
-    width: 220,
+    marginLeft:-40,
+    width: 150,
     resizeMode: "contain"
   },
   foto2: {
@@ -79,6 +107,8 @@ const styles = StyleSheet.create({
   },
   titulos:{
     fontWeight: 'bold',
-    fontSize: 20
+    fontSize: 25,
+    alignSelf:"flex-start",
+    marginLeft:35
   }
 });

@@ -84,9 +84,10 @@ export default function HomeScreen() {
           <TextInput style={styles.input} placeholder='Introduce una contraseña' autoCapitalize='none' value={clave} onChangeText={ponerClave} secureTextEntry={true}></TextInput>
         </View>
         <TextInput style={styles.input} placeholder='Repite la contraseña' autoCapitalize='none' value={confirmarClave} onChangeText={ponerConfirmarClave} secureTextEntry={true}></TextInput>
+        {errorMensaje ? ( <Text style={styles.mensajeError}>{errorMensaje}</Text>) : null}
       </View>
       <View style={styles.container2}>
-        <KivaaBoton titulo="Regístrate" onPress={() => router.push("/PantallaHome")}></KivaaBoton>
+        <KivaaBoton titulo="Regístrate" onPress={registrar}></KivaaBoton>
         <Text style={styles.texto}>Si no tienes cuenta, <Text style={styles.textoEnlace} onPress={() => router.push("/PantallaInicio")}>inicia sesión</Text></Text>
         <Image source={require('@/assets/images/separacion.png')} style={styles.icono3}></Image>
         <TouchableOpacity style={styles.botonGoogle}>
@@ -124,6 +125,12 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"column",
     gap:8
+  },
+  mensajeError:{
+    color: "red", 
+    marginBottom: 5,
+    marginTop:2,
+    alignSelf:"center"
   },
   input1:{
     borderColor:"#110501",

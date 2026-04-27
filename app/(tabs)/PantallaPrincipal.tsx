@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
-import {StyleSheet, View, Text, ScrollView, FlatList, Modal, TouchableWithoutFeedback } from 'react-native';
+import {StyleSheet, View, Text, ScrollView, FlatList, Modal, TouchableWithoutFeedback , TouchableOpacity} from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import { useState, useEffect,useCallback } from 'react';
 import axios from 'axios';
@@ -18,6 +18,17 @@ interface Restaurante {
 export default function HomeScreen() {
   //Para cambiar entre pantallas
   const router = useRouter();
+  const [busqueda, setBusqueda] = useState('');
+  const [resultados, setResultados] = useState([]);
+  const [region, setRegion] = useState({
+    latitude: 40.4167,
+    longitude: -3.70325,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
+
+
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   return (
     <View style={styles.container}>
@@ -32,6 +43,15 @@ export default function HomeScreen() {
       <View style={styles.textos}>
         <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
         <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
+      </View>
+      <View style={styles.bloqueBotones}>
+        <TouchableOpacity>
+          <View style={styles.botonfiltro}>
+            <Image source={require('@/assets/images/Filter.png')} style={styles.icono3}></Image>
+            <Text style={styles.textoBlanco}>Filtrar</Text>
+          </View>
+        </TouchableOpacity>
+        <Text></Text>
       </View>
       <View style={styles.containerMenu}>
         <View style={styles.contenedorIconos}>
@@ -103,6 +123,26 @@ const styles = StyleSheet.create({
     color:"black",
     gap:5
   },
+  bloqueBotones:{
+    display:"flex",
+    flexDirection:"column",
+    marginTop:20,
+    alignItems:"flex-end",
+    width:330
+  },
+  textoBlanco:{
+    color:"#FBF6F1"
+  },
+  botonfiltro:{
+    backgroundColor:"#110501",
+    display:"flex",
+    flexDirection:"row",
+    gap:10,
+    paddingHorizontal:20,
+    paddingVertical:8,
+    borderRadius:20,
+    alignItems:"center",
+  },
   miTextoBoton:{
     color:"#110501",
   },
@@ -125,6 +165,10 @@ const styles = StyleSheet.create({
   icono2:{
     height:60,
     width:60
+  },
+  icono3:{
+    height:15,
+    width:15
   },
   foto: {
     marginLeft:-40,

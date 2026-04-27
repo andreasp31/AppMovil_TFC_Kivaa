@@ -18,7 +18,11 @@ export default function TabLayout() {
           height: 60,
           margin:15,
           borderRadius:80,
-          paddingTop:10
+          paddingTop:10,
+          elevation:0,
+          shadowOpacity: 0,
+          position: 'absolute',
+
         },
         headerShown: false, // Para que no salga el título arriba
       }}>
