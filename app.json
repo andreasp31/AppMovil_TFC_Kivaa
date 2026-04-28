@@ -19,7 +19,17 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "expo": {
+      "android": {
+        "config": {
+          "googleMaps": {
+            "apiKey": "AIzaSyCZxKeONiM8AhPKrbGx50YpWaazxIfx4HI"
+          }
+        },
+        "package": "com.andreasp31.kivaa" 
+      }
+  }
     },
     "web": {
       "output": "static",

@@ -3,23 +3,28 @@ import { KivaaBoton } from '../../components/KivaaBoton';
 import {StyleSheet, View, Text, ScrollView, FlatList, Modal, TouchableWithoutFeedback , TouchableOpacity} from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import { useState, useEffect,useCallback } from 'react';
+import MapView, { Marker, Callout } from 'react-native-maps';
+import * as Location from 'expo-location';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface Restaurante {
+interface Local {
   _id: string;
   nombre: string;
-  descripcion: string;
-  clasificacion: number;
-  horarios: string[];
-  fechaHora: string;
+  tipo: string;     
+  direccion: string; 
+  latitud: number;   
+  longitud: number;  
+  descripcion?: string;
+  clasificacion?: number;
 }
 
-export default function HomeScreen() {
+export default function PantallaPrincipal() {
   //Para cambiar entre pantallas
   const router = useRouter();
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState([]);
+  const [locales, setLocales] = useState<Local[]>([]);
   const [region, setRegion] = useState({
     latitude: 40.4167,
     longitude: -3.70325,
@@ -27,7 +32,36 @@ export default function HomeScreen() {
     longitudeDelta: 0.05,
   });
 
-
+  useEffect(() => {
+    (async () => {
+      // Pedir permiso de ubicación
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Permiso denegado");
+        return;
+      }
+      // Obtener la ubicación actual
+      let ubicacion = await Location.getCurrentPositionAsync({});
+      
+      // Actualizar la región del mapa con tu posición real
+      setRegion({
+        latitude: ubicacion.coords.latitude,
+        longitude: ubicacion.coords.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+    })();
+    
+    const obtenerLocales = async () => {
+      try {
+        const res = await axios.get("http://10.0.2.2:3000/api/locales");
+        setLocales(res.data);
+      } catch (error) {
+        console.error("Error cargando locales:", error);
+      }
+    };
+    obtenerLocales();
+  }, []);
 
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   return (
@@ -52,6 +86,34 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
         <Text></Text>
+      </View>
+      <View style={styles.container3}>
+        <MapView style={styles.mapa}
+          region={region}
+          // Permite que el usuario se mueva libremente después
+          onRegionChangeComplete={setRegion} 
+          provider="google"
+          showsUserLocation={true}>
+          {locales.map((local) => (
+          <Marker
+            key={local._id}
+            coordinate={{
+              latitude: local.latitud,
+              longitude: local.longitud,
+            }}
+            title={local.nombre}
+            description={local.tipo}
+          >
+          <Callout>
+            <View style={{ padding: 5 }}>
+              <Text style={{ fontWeight: 'bold' }}>{local.nombre}</Text>
+              <Text>{local.direccion}</Text>
+              <Text style={{ color: 'blue' }}>Ver detalles</Text>
+            </View>
+          </Callout>
+        </Marker>
+        ))}
+        </MapView>
       </View>
       <View style={styles.containerMenu}>
         <View style={styles.contenedorIconos}>
@@ -87,8 +149,17 @@ const styles = StyleSheet.create({
   },
   container2: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop:10
+  },
+  container3:{
+    display:"flex",
+    marginTop:20,
+  },
+  mapa:{
+    width: 350,
+    height: 250,
+    borderRadius: 60,
   },
   containerCabecera:{
     display:"flex",
