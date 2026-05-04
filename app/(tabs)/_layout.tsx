@@ -113,7 +113,13 @@ export default function TabLayout() {
           tabBarItemStyle: { display: 'none' },
         }}
       />
-      
+      <Tabs.Screen
+        name="PantallaPerfil"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
     </Tabs>
   );
 }

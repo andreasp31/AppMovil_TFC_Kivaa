@@ -1,22 +1,42 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
 import {StyleSheet, View, TouchableOpacity, Text } from 'react-native';
-import { useRouter, Stack} from 'expo-router';
+import { useRouter, Stack, useFocusEffect} from 'expo-router';
+import React,{ useState, useEffect,useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
   //Para cambiar entre pantallas
   const router = useRouter();
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario');
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
+
+  useFocusEffect(
+  useCallback(()=>{
+    const nombreUsuario = async () => {
+      try {
+        const nombre = await AsyncStorage.getItem("nombreUsuario");
+        if(nombre){
+          setNombreUsuario(nombre);
+        }
+      }
+      catch(error){
+        console.error("Error al cargar el nombre", error);
+      }
+    };
+    nombreUsuario();
+  }, [])
+)
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style= {styles.containerCabecera}>
+      <TouchableOpacity style= {styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
           <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
-          <Text style={styles.textoDescripcion}>Nombre</Text>
+          <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <Text style={styles.titulos}>Mis Reseñas</Text>
     </View>  
   );

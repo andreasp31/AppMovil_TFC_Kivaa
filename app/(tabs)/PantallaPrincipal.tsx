@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
-import {StyleSheet, View, Text, ScrollView, FlatList, Modal, TouchableWithoutFeedback , TouchableOpacity} from 'react-native';
+import {StyleSheet, View, Text, ScrollView, FlatList, Modal, TouchableWithoutFeedback , TouchableOpacity, TextInput} from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
-import { useState, useEffect,useCallback } from 'react';
+import React,{ useState, useEffect,useCallback } from 'react';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
@@ -25,6 +25,9 @@ export default function PantallaPrincipal() {
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState([]);
   const [locales, setLocales] = useState<Local[]>([]);
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario');
+  const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
+  const mapRef = React.useRef<MapView | null>(null);
   const [region, setRegion] = useState({
     latitude: 40.4167,
     longitude: -3.70325,
@@ -33,47 +36,79 @@ export default function PantallaPrincipal() {
   });
 
   useEffect(() => {
-    (async () => {
-      // Pedir permiso de ubicación
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Permiso denegado");
-        return;
-      }
-      // Obtener la ubicación actual
-      let ubicacion = await Location.getCurrentPositionAsync({});
-      
-      // Actualizar la región del mapa con tu posición real
-      setRegion({
-        latitude: ubicacion.coords.latitude,
-        longitude: ubicacion.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
-    })();
-    
-    const obtenerLocales = async () => {
+  (async () => {
+    // Pedir permiso de ubicación
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      console.log("Permiso denegado");
+      return;
+    }
+    // Obtener la ubicación actual
+    let ubicacion = await Location.getCurrentPositionAsync({});
+    // Actualizar la región del mapa con tu posición real
+    setRegion({
+      latitude: ubicacion.coords.latitude,
+      longitude: ubicacion.coords.longitude,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    });
+  })();
+  // Función para los locales
+  const obtenerLocales = async () => {
+    try {
+      const res = await axios.get("http://10.0.2.2:3000/api/locales");
+      setLocales(res.data);
+    } catch (error) {
+      console.error("Error cargando locales:", error);
+    }
+  };
+}, []);
+
+useFocusEffect(
+  useCallback(()=>{
+    const nombreUsuario = async () => {
       try {
-        const res = await axios.get("http://10.0.2.2:3000/api/locales");
-        setLocales(res.data);
-      } catch (error) {
-        console.error("Error cargando locales:", error);
+        const nombre = await AsyncStorage.getItem("nombreUsuario");
+        if(nombre){
+          setNombreUsuario(nombre);
+        }
+      }
+      catch(error){
+        console.error("Error al cargar el nombre", error);
       }
     };
-    obtenerLocales();
-  }, []);
+    nombreUsuario();
+  }, [])
+)
+
+  //Mover el mapa al toca el local de la lista
+  const irLocal = (lat:number, lng: number) =>{
+      mapRef.current?.animateToRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000)
+  };
+
+  //Función para buscar local
+  const manejarBusqueda = (texto: string) =>{
+    setBusqueda(texto);
+    const filtrados = locales.filter(item => item.nombre.toLocaleLowerCase().includes(texto.toLocaleLowerCase()));
+    setLocalesBusqueda(filtrados);
+  };
 
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style= {styles.containerCabecera}>
+      <TouchableOpacity style= {styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
           <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
-          <Text style={styles.textoDescripcion}>Nombre</Text>
+          <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <View style={styles.textos}>
         <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
         <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
@@ -83,6 +118,11 @@ export default function PantallaPrincipal() {
           <View style={styles.botonfiltro}>
             <Image source={require('@/assets/images/Filter.png')} style={styles.icono3}></Image>
             <Text style={styles.textoBlanco}>Filtrar</Text>
+          </View>
+        </TouchableOpacity> 
+        <TouchableOpacity>
+          <View style={styles.buscadorContainer}>
+            <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={manejarBusqueda}></TextInput>
           </View>
         </TouchableOpacity>
         <Text></Text>
@@ -94,7 +134,7 @@ export default function PantallaPrincipal() {
           onRegionChangeComplete={setRegion} 
           provider="google"
           showsUserLocation={true}>
-          {locales.map((local) => (
+          {localesBusqueda.map((local) => (
           <Marker
             key={local._id}
             coordinate={{
@@ -154,12 +194,21 @@ const styles = StyleSheet.create({
   },
   container3:{
     display:"flex",
-    marginTop:20,
+  },
+  buscadorContainer:{
+    borderWidth:1,
+    borderRadius:20,
+    paddingHorizontal:30,
+    paddingVertical:2,
+    width:320
+  },
+  textoBuscador:{
+
   },
   mapa:{
     width: 350,
     height: 250,
-    borderRadius: 60,
+    borderRadius: 100,
   },
   containerCabecera:{
     display:"flex",
@@ -197,9 +246,10 @@ const styles = StyleSheet.create({
   bloqueBotones:{
     display:"flex",
     flexDirection:"column",
-    marginTop:20,
+    marginTop:5,
     alignItems:"flex-end",
-    width:330
+    width:330,
+    gap:10
   },
   textoBlanco:{
     color:"#FBF6F1"
@@ -213,6 +263,8 @@ const styles = StyleSheet.create({
     paddingVertical:8,
     borderRadius:20,
     alignItems:"center",
+    width:110,
+    alignSelf:"flex-end"
   },
   miTextoBoton:{
     color:"#110501",
