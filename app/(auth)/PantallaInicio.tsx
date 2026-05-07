@@ -19,12 +19,15 @@ export default function HomeScreen() {
           email: email,
           clave: clave
         });
+        console.log("RESPUESTA COMPLETA DEL SERVIDOR:", respuesta.data);
         //se guarda el nombre en el local y se coge el nombre de la base de datos
         const { token, usuario } = respuesta.data;
         await AsyncStorage.setItem("nombreUsuario",usuario.nombre);
+        await AsyncStorage.setItem("apellidosUsuario",usuario.apellidos || " ");
         await AsyncStorage.setItem("token",token);
         await AsyncStorage.setItem("roleUsuario", usuario.role);
         await AsyncStorage.setItem("emailUsuario", usuario.email);
+        await AsyncStorage.setItem("claveUsuario",usuario.clave);
         if(usuario.role === "admin"){
           
         }

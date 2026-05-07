@@ -1,21 +1,62 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
-import {StyleSheet, View, TouchableOpacity, Text } from 'react-native';
-import { useRouter, Stack} from 'expo-router';
+import {StyleSheet, View, TouchableOpacity, Text, Modal } from 'react-native';
+import { useRouter, Stack, useFocusEffect } from 'expo-router';
+import React,{ useState, useEffect,useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PantallaPerfil() {
   //Para cambiar entre pantallas
   const router = useRouter();
+  const [nombreUsuario, setNombreUsuario] = useState('Usuario');
+  const [apellidosUsuario, setApellidosUsuario] = useState('');
+  const [correoUsuario, setCorreoUsuario] = useState('');
+  const [claveUsuario, setClaveUsuario] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+
+  useFocusEffect(
+  useCallback(()=>{
+    const datosUsuario = async () => {
+      try {
+        const nombre = await AsyncStorage.getItem("nombreUsuario");
+        const apellidos = await AsyncStorage.getItem("apellidosUsuario");
+        const correo = await AsyncStorage.getItem("emailUsuario");
+        const clave = await AsyncStorage.getItem("claveUsuario");
+        if(nombre){
+          setNombreUsuario(nombre);
+        }
+        if(apellidos){
+          setApellidosUsuario(apellidos)
+        }
+        if(correo){
+          const posicionArroba = correo.indexOf("@");
+          const nombreCortado = correo.substring(0,2);
+          const dominio = correo.substring(posicionArroba);
+          const correoFinal =  nombreCortado + "****" + dominio;
+          setCorreoUsuario(correoFinal);
+        }
+        if(clave){
+          setClaveUsuario("*******");
+        }
+        else setApellidosUsuario("No encontrado");
+      }
+      catch(error){
+        console.error("Error al cargar el datos", error);
+      }
+    };
+    datosUsuario();
+  }, [])
+)
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style= {styles.containerCabecera}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
-        <View style={styles.contenedorSalir}>
+        <TouchableOpacity style={styles.contenedorSalir} onPress={() => setModalVisible(true)}>
           <Image source={require('@/assets/images/LogOut.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>Salir</Text>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style = {styles.contenedorTexto}>
         <Text style={styles.titulos}>Mi Cuenta</Text>
@@ -33,14 +74,14 @@ export default function PantallaPerfil() {
                 <Text>Nombre</Text>
                 <Image source={require('@/assets/images/EditBoton.png')} style={styles.iconoEditar}></Image>
               </View>
-              <Text style={styles.titulos}>Andrea Sofía</Text>
+              <Text style={styles.titulos}>{nombreUsuario}</Text>
             </View>
             <View style = {styles.contenedorApartado}>
               <View style = {styles.contenedorTextos}>
                 <Text>Apellidos</Text>
                 <Image source={require('@/assets/images/EditBoton.png')} style={styles.iconoEditar}></Image>
               </View>
-              <Text style={styles.titulos}>Pais Dos Santos</Text>
+              <Text style={styles.titulos}>{apellidosUsuario}</Text>
             </View>
           </View>
         </View>
@@ -50,14 +91,14 @@ export default function PantallaPerfil() {
               <Text>Correo</Text>
               <Image source={require('@/assets/images/EditBoton.png')} style={styles.iconoEditar}></Image>
             </View>
-            <Text>a******@gmail.com</Text>
+            <Text>{correoUsuario}</Text>
           </View>
           <View style = {styles.contenedorApartado}>
             <View style = {styles.contenedorTextos}>
               <Text>Contraseña</Text>
               <Image source={require('@/assets/images/EditBoton.png')} style={styles.iconoEditar}></Image>
             </View>
-            <Text>**************</Text>
+            <Text>{claveUsuario}</Text>
           </View>
         </View>
       </View>
@@ -69,6 +110,25 @@ export default function PantallaPerfil() {
           <Text>Actualizar</Text>
         </TouchableOpacity>
       </View>
+      <Modal visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+        animationType="fade"
+        transparent={true}>
+          <View style={styles.modalFondo}>
+            <View style={styles.modalBloque}>
+              <Text style={styles.titulos}>Cerrar Sesión</Text>
+              <Text>¿Estás seguro de que quieres cerrar sesión?</Text>
+              <View style = {styles.contenedorBotones2}>
+                <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible(false)}>
+                  <Text>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
+                  <Text>Salir</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+      </Modal>
     </View>  
   );
 }
@@ -82,7 +142,7 @@ const styles = StyleSheet.create({
   },
   container2: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop:10
   },
   Boton1:{
@@ -90,6 +150,20 @@ const styles = StyleSheet.create({
     paddingHorizontal:25,
     paddingVertical:10,
     borderRadius:30
+  },
+  modalFondo:{
+    backgroundColor:"rgba(0,0,0,0.5)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  modalBloque:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10
   },
   Boton2:{
     paddingHorizontal:45,
@@ -115,6 +189,12 @@ const styles = StyleSheet.create({
     flexDirection:"row",
     marginTop:250,
     gap:40
+  },
+  contenedorBotones2:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:55
   },
   contenedorInferior:{
     display:"flex",
