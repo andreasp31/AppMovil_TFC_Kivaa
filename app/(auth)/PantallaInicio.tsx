@@ -15,13 +15,16 @@ export default function HomeScreen() {
   const login = async()=>{
       ponerMensaje('');
       try{
+        await AsyncStorage.clear();
         const respuesta = await axios.post("http://10.0.2.2:3000/api/login",{
           email: email,
           clave: clave
         });
-        console.log("RESPUESTA COMPLETA DEL SERVIDOR:", respuesta.data);
+        console.log("Respuesta:", respuesta.data);
         //se guarda el nombre en el local y se coge el nombre de la base de datos
         const { token, usuario } = respuesta.data;
+        await AsyncStorage.setItem("idUsuario",usuario.id);
+        console.log("He guardado el ID:", usuario.id);
         await AsyncStorage.setItem("nombreUsuario",usuario.nombre);
         await AsyncStorage.setItem("apellidosUsuario",usuario.apellidos || " ");
         await AsyncStorage.setItem("token",token);

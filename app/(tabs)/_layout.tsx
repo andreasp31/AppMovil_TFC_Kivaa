@@ -120,6 +120,13 @@ export default function TabLayout() {
           tabBarItemStyle: { display: 'none' },
         }}
       />
+      <Tabs.Screen
+        name="PantallaLocal"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
     </Tabs>
   );
 }

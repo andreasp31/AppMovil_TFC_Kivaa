@@ -16,7 +16,8 @@ interface Local {
   latitud: number;   
   longitud: number;  
   descripcion?: string;
-  clasificacion?: number;
+  cualificacion?: number;
+  foto?: string;
 }
 
 export default function PantallaPrincipal() {
@@ -27,6 +28,10 @@ export default function PantallaPrincipal() {
   const [locales, setLocales] = useState<Local[]>([]);
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
   const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
+  const [mostrarLista, setMostrarLista] = useState(true);
+  const [mostrarModal, setMostrarModal] = useState(true);
+  const [titulosResultados, setTitulosResultados] = useState("Resultados");
+  const [favoritos, setFavoritos] = useState<Local[]>([]);
   const mapRef = React.useRef<MapView | null>(null);
   const [region, setRegion] = useState({
     latitude: 40.4167,
@@ -35,8 +40,16 @@ export default function PantallaPrincipal() {
     longitudeDelta: 0.05,
   });
 
+  const abrirModal = (item: Local)=>{
+    setMostrarModal(true);
+  }
+
+  const cerrarModal = ()=>{
+    setMostrarModal(false);
+  }
+
   useEffect(() => {
-  (async () => {
+  const datosIniciales = async () => {
     // Pedir permiso de ubicación
     let { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
@@ -52,32 +65,35 @@ export default function PantallaPrincipal() {
       latitudeDelta: 0.05,
       longitudeDelta: 0.05,
     });
-  })();
-  // Función para los locales
-  const obtenerLocales = async () => {
     try {
       const res = await axios.get("http://10.0.2.2:3000/api/locales");
       setLocales(res.data);
     } catch (error) {
       console.error("Error cargando locales:", error);
     }
-  };
+  }
+  datosIniciales();
 }, []);
 
 useFocusEffect(
   useCallback(()=>{
-    const nombreUsuario = async () => {
+    const datosUsuario = async () => {
       try {
         const nombre = await AsyncStorage.getItem("nombreUsuario");
+        const usuarioId = await AsyncStorage.getItem("idUsuario");
         if(nombre){
           setNombreUsuario(nombre);
         }
+        if(usuarioId){
+          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
+          setFavoritos(resultado.data);
+        }
       }
       catch(error){
-        console.error("Error al cargar el nombre", error);
+        console.error("Error al cargar los datos", error);
       }
     };
-    nombreUsuario();
+    datosUsuario();
   }, [])
 )
 
@@ -91,11 +107,158 @@ useFocusEffect(
       }, 1000)
   };
 
+  //Calcular distancia cerca en mapa, esto lo busqué
+  const calcularDistancia = (lat1:number, lon1:number, lat2:number, lon2:number) =>{
+    const radio = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return radio * c;
+  }
+
   //Función para buscar local
   const manejarBusqueda = (texto: string) =>{
     setBusqueda(texto);
-    const filtrados = locales.filter(item => item.nombre.toLocaleLowerCase().includes(texto.toLocaleLowerCase()));
+    setMostrarLista(true);
+    const textoMinusculas = texto.toLowerCase().trim();
+    //si no hay texto se limpia
+    if(textoMinusculas.trim() == ""){
+      setLocalesBusqueda([]);
+      return;
+    }
+    const palabrasCerca = ["cerca", "aquí", "sin gluten"];
+    const busquedaCerca = palabrasCerca.some(p => textoMinusculas.includes(p));
+    const busquedas =[];
+    for(let i=0; i< locales.length; i++){
+      const localEspecifico = locales[i];
+      const nombre = localEspecifico.nombre.toLowerCase();
+      const tipo = localEspecifico.tipo.toLowerCase();
+
+      const coincideTexto = nombre.includes(textoMinusculas) || tipo.includes(textoMinusculas);
+      let filtroCerca = false;
+      let distanciaCalculada = null;
+      if(busquedaCerca){
+        const distanciaCalculada = calcularDistancia(
+          region.latitude,
+          region.longitude,
+          localEspecifico.latitud,
+          localEspecifico.longitud
+        )
+        if(distanciaCalculada < 10){
+          filtroCerca = true;
+        }
+      };
+      if(coincideTexto || filtroCerca){
+        busquedas.push({ ...localEspecifico, distancia: distanciaCalculada });
+      }
+    }
+    //actualizar estado de los locales buscados
+    setLocalesBusqueda(busquedas);
+    //Para que se vea en el mapa
+    if(busquedas.length > 0){
+      irLocal(busquedas[0].latitud, busquedas[0].longitud);
+    }
+  };
+
+  //Función para enseñar todos los locales cerca 
+  const mostrarLocalesCerca = () => {
+    const sitiosCerca = locales.filter(local =>{
+      const distanciaCalculada = calcularDistancia(
+          region.latitude,
+          region.longitude,
+          local.latitud,
+          local.longitud
+      );
+      //kilometros de cerca
+      return distanciaCalculada < 10;
+    })
+    if (sitiosCerca.length > 0) {
+      setLocalesBusqueda(sitiosCerca);
+      setMostrarLista(false);
+      setBusqueda("Sitios cerca sin gluten");
+      
+      // Ajustamos el mapa para que se vean varios
+      mapRef.current?.animateToRegion({
+        ...region,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      }, 1000);
+    }
+  }
+
+  const filtrarCategoria = (categoria: string) => {
+    const filtrados = locales.filter(local =>
+      local.tipo.toLowerCase().includes(categoria.toLowerCase())
+    );
     setLocalesBusqueda(filtrados);
+    if (filtrados.length > 0) {
+    const primerLocal = filtrados[0];
+    const distancia = calcularDistancia(
+      region.latitude,
+      region.longitude,
+      primerLocal.latitud,
+      primerLocal.longitud
+    );
+
+    if (distancia < 10) {
+      setTitulosResultados(`${categoria} cerca de ti`);
+    } else {
+      const partesDireccion = primerLocal.direccion.split(',');
+      const ciudad = partesDireccion[partesDireccion.length - 1].trim();
+      
+      setTitulosResultados(`${categoria} en ${ciudad}`);
+    }
+  } else {
+    setTitulosResultados(`No hay ${categoria} disponibles`);
+  }
+}
+
+//gestionar favoritos
+const manejarFavoritos = async (localId: string)=>{
+  try{
+    const usuarioId = await AsyncStorage.getItem("idUsuario");
+    console.log("ID del Local enviado:", localId);
+    console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
+    const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",{
+      localId,
+      usuarioId
+    });
+    alert(resultado.data.message);
+  }
+  catch(error){
+    console.error("Error al gestionar los favoritos", error);
+  }
+}
+
+
+  const tarjeta = ({ item }:{item : Local}) => {
+    console.log("Datos de la tarjeta:", item);
+    return(
+      <TouchableOpacity style={styles.tarjeta} onPress={() => router.push({pathname:"/PantallaLocal", params:{id: item._id}})}>
+        <Image source={{ uri: item.foto }} style={styles.fotoTarjeta}/>
+        <View style={styles.tarjetaContenedor}>
+          <View style={styles.contenedorSuperior}>
+            <View style={styles.contenedorNota}>
+              <Image source={require('@/assets/images/star_filled.png')} style={styles.iconoEstrella}></Image>
+              <Text style={styles.tarjetatexto}>{item.cualificacion}</Text>
+            </View>
+            <TouchableOpacity onPress={()=> manejarFavoritos(item._id)}>
+              <Image source={require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.tarjetaInfo}>
+            <Text style={styles.tarjetaTitulo}>{item.nombre}</Text>
+            <Text style={styles.tipoTarjeta}>{item.tipo}</Text>
+            <View style={styles.apartadosTarjeta}>
+              <Image source={require('@/assets/images/MapPin.png')} style={styles.iconoEstrella}></Image>
+              <Text style={styles.tarjetaTexto}>{item.direccion}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    ) 
   };
 
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
@@ -109,26 +272,55 @@ useFocusEffect(
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>
-      <View style={styles.textos}>
+      <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={false} style={styles.contenedorGeneral}>
+        <View style={styles.textos}>
         <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
         <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
       </View>
       <View style={styles.bloqueBotones}>
-        <TouchableOpacity>
-          <View style={styles.botonfiltro}>
-            <Image source={require('@/assets/images/Filter.png')} style={styles.icono3}></Image>
-            <Text style={styles.textoBlanco}>Filtrar</Text>
-          </View>
-        </TouchableOpacity> 
-        <TouchableOpacity>
-          <View style={styles.buscadorContainer}>
-            <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={manejarBusqueda}></TextInput>
-          </View>
-        </TouchableOpacity>
-        <Text></Text>
+        <View style={styles.contenedorBusqueda}>
+          <TouchableOpacity>
+            <View style={styles.buscadorContainer}>
+              <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={(texto) => setBusqueda(texto)} onSubmitEditing={() => manejarBusqueda(busqueda)} returnKeyType='search'></TextInput>
+              <TouchableOpacity onPress={() => manejarBusqueda(busqueda)}>
+                <Image source={require('@/assets/images/Search.png')} style={styles.icono3}></Image>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+          {busqueda.length > 0 && localesBusqueda.length > 0 && mostrarLista && (
+            <View style={styles.menuBuscador}>
+              <FlatList
+                data={localesBusqueda}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.textoLugar}
+                    onPress={() => {
+                      irLocal(item.latitud, item.longitud); 
+                      // Cierra el desplegable
+                      setLocalesBusqueda([item]); 
+                      // Pone el nombre en el input
+                      setBusqueda(item.nombre); 
+                      setMostrarLista(false);
+                    }}
+                  >
+                    <Text style={styles.textoBold}>{item.nombre}</Text>
+                    <Text style={styles.textoBuscador}>{item.tipo}</Text>
+                    <Image source={require('@/assets/images/Line.png')} style={styles.linea}></Image>
+                  </TouchableOpacity>
+                )}
+                ListFooterComponent={() =>(
+                  <TouchableOpacity onPress={mostrarLocalesCerca}>
+                    <Text>Ver todos los sitios cerca</Text>
+                  </TouchableOpacity>
+                )}
+              /> 
+            </View>
+          )}
+        </View>
       </View>
       <View style={styles.container3}>
         <MapView style={styles.mapa}
+          ref={mapRef}
           region={region}
           // Permite que el usuario se mueva libremente después
           onRegionChangeComplete={setRegion} 
@@ -141,14 +333,12 @@ useFocusEffect(
               latitude: local.latitud,
               longitude: local.longitud,
             }}
-            title={local.nombre}
-            description={local.tipo}
+            image={require('@/assets/images/PIN.png')}
           >
-          <Callout>
-            <View style={{ padding: 5 }}>
-              <Text style={{ fontWeight: 'bold' }}>{local.nombre}</Text>
-              <Text>{local.direccion}</Text>
-              <Text style={{ color: 'blue' }}>Ver detalles</Text>
+          <Callout tooltip={false}>
+            <View style={styles.buscadorContainer}>
+              <Text style={styles.textoBold}>{local.nombre}</Text>
+              <Text>Ver detalles</Text>
             </View>
           </Callout>
         </Marker>
@@ -156,27 +346,35 @@ useFocusEffect(
         </MapView>
       </View>
       <View style={styles.containerMenu}>
-        <View style={styles.contenedorIconos}>
+        <TouchableOpacity style={styles.contenedorIconos} onPress={() => filtrarCategoria("Cafetería")}>
           <Image source={require('@/assets/images/iconoCafeteria.png')} style={styles.icono2}></Image>
           <Text style={styles.textoDescripcion}>Cafeterías</Text>
-        </View>
-        <View style={styles.contenedorIconos}>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.contenedorIconos} onPress={() => filtrarCategoria("Panadería")}>
           <Image source={require('@/assets/images/iconoDesayuno.png')} style={styles.icono2}></Image>
           <Text style={styles.textoDescripcion}>Panaderías</Text>
-        </View>
-        <View style={styles.contenedorIconos}>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.contenedorIconos} onPress={() => filtrarCategoria("Supermercado")}>
           <Image source={require('@/assets/images/iconoSuper.png')} style={styles.icono2}></Image>
           <Text style={styles.textoDescripcion}>Supermercados</Text>
-        </View>
-        <View style={styles.contenedorIconos}>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.contenedorIconos}  onPress={() => filtrarCategoria("Restaurante")}>
           <Image source={require('@/assets/images/iconoRestaurante.png')} style={styles.icono2}></Image>
           <Text style={styles.textoDescripcion}>Restaurantes</Text>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={styles.textos}>
-        <Text style={styles.titulos}>Resultados</Text>
+        <Text style={styles.titulos}>{titulosResultados}</Text>
       </View>
-    </View>  
+      <View style={styles.cajaScroll2}>
+        {localesBusqueda.map((local) => (
+          <View key={local._id}>
+            {tarjeta({ item: local })}
+          </View>
+        ))}
+      </View>
+    </ScrollView>  
+  </View> 
   );
 }
 
@@ -192,18 +390,174 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop:10
   },
+  apartadosTarjeta:{
+    display:"flex",
+    flexDirection:"row",
+    gap:5
+  },
   container3:{
     display:"flex",
+  },
+  tarjetaContenedor:{
+    display:"flex",
+    flexDirection:"column",
+    gap:2
+  },
+  tarjeta:{
+    borderWidth:1,
+    borderColor:"#9C9696",
+    borderRadius:20,
+    padding:10,
+    display:"flex",
+    flexDirection:"row",
+    gap:10,
+    marginBottom:10,
+    width:330,
+    alignSelf:"center",
+    margin:0
+  },
+  iconoFav:{
+    height:30,
+    width:30,
+    marginTop:-3
+  },
+  contenedorSuperior:{
+    display:"flex",
+    flexDirection:"row",
+    width:180,
+    alignItems:"center",
+    justifyContent:"flex-end",
+    alignContent:"center",
+    gap:5
+  },
+  iconoEstrella:{
+    height:15,
+    width:15
+  },
+  contenedorNota:{
+    display:"flex",
+    flexDirection:"row",
+    alignItems:"center",
+    gap:5,
+    backgroundColor:"#FAD934",
+    paddingHorizontal:15,
+    paddingVertical:5,
+    borderRadius:20,
+    alignSelf:"flex-start"
+  },
+  tarjetaInfo:{
+    display:"flex",
+    flexDirection:"column",
+    gap:10,
+  },
+  tarjetaCabecera:{
+    display:"flex",
+    flexDirection:"row",
+    alignItems:"center",
+    gap:10,
+    width:300,
+    marginLeft:70
+  },
+  tarjetaTitulo:{
+    fontSize:16,
+    fontWeight:600
+  },
+  tarjetatexto:{
+    fontSize:12,
+    fontWeight:600
+  },
+  tarjetaDireccion:{
+    fontSize:12
+  },
+  tarjetaTexto:{
+    fontSize:12,
+    color:"#9C9696"
+  },
+  fotoTarjeta:{
+    width:120,
+    height:120,
+    borderRadius:10
+  },
+  tipoTarjeta:{
+    borderRadius:30,
+    borderWidth:1,
+    borderColor:"#9C9696",
+    color:"#9C9696",
+    width:120,
+    padding:3,
+    textAlign:"center",
+    fontSize:13
+    
+  },
+  contenedorGeneral:{
+    margin:3,
+  },
+  cajaScroll2:{
+    marginLeft:10,
+    marginRight:10,
+    height:440,
+    marginTop:15
+  },
+  menuBuscador:{
+    position:"absolute",
+    zIndex:1000,
+    backgroundColor:"#ffffff",
+    marginTop:55,
+    paddingVertical:25,
+    width:320,
+    paddingLeft:20,
+    borderRadius:15
+  },
+  iconoPin:{
+    width:45,
+    height:45,
+    resizeMode:"contain"
+  },
+  bloqueMarcador:{
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fondoTexto:{
+    backgroundColor: "white",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#110501",
+    alignSelf: "center",
+    minWidth: 80
   },
   buscadorContainer:{
     borderWidth:1,
     borderRadius:20,
     paddingHorizontal:30,
     paddingVertical:2,
-    width:320
+    width:350,
+    display:"flex",
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"space-between"
+  },
+  contenedorBusqueda:{
+    marginBottom:10,
+    marginTop:30,
+    display:"flex",
+    alignContent:"center",
+    alignItems:"center",
+    justifyContent:"center",
+  },
+  linea:{
+    width:280,
+    height:3,
+    marginTop:10
   },
   textoBuscador:{
 
+  },
+  textoLugar:{
+    display:"flex",
+    flexDirection:"column",
+    paddingBottom:20
   },
   mapa:{
     width: 350,
@@ -247,7 +601,7 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"column",
     marginTop:5,
-    alignItems:"flex-end",
+    marginLeft:10,
     width:330,
     gap:10
   },
@@ -279,7 +633,8 @@ const styles = StyleSheet.create({
     textAlign: "center", 
     color:"#110501",     
     fontSize: 14,
-    marginBottom: 5,    
+    marginBottom: 5, 
+    marginLeft:-30   
   },
   icono:{
     height:50,
@@ -315,6 +670,7 @@ const styles = StyleSheet.create({
   },
   titulos:{
     fontWeight: 'bold',
-    fontSize: 20
+    fontSize: 20,
+    marginLeft:10
   }
 });
