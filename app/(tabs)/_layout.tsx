@@ -127,6 +127,20 @@ export default function TabLayout() {
           tabBarItemStyle: { display: 'none' },
         }}
       />
+      <Tabs.Screen
+        name="PantallaAdmin"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaAdResena"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
     </Tabs>
   );
 }
