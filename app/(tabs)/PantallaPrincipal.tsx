@@ -30,8 +30,12 @@ export default function PantallaPrincipal() {
   const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
   const [mostrarLista, setMostrarLista] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(true);
-  const [titulosResultados, setTitulosResultados] = useState("Resultados");
-  const [favoritos, setFavoritos] = useState<Local[]>([]);
+  const [titulosResultados, setTitulosResultados] = useState("Buscar Local");
+  const [favoritos, setFavoritos] = useState<string[]>([]);
+  const [modalLocal, setModalLocal] = useState(false);
+  const [alertaFav, setAlertaFav] = useState(false);
+  const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [localSeleccionado, setLocalSeleccionado] = useState<Local | null>(null);
   const mapRef = React.useRef<MapView | null>(null);
   const [region, setRegion] = useState({
     latitude: 40.4167,
@@ -39,14 +43,6 @@ export default function PantallaPrincipal() {
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
   });
-
-  const abrirModal = (item: Local)=>{
-    setMostrarModal(true);
-  }
-
-  const cerrarModal = ()=>{
-    setMostrarModal(false);
-  }
 
   useEffect(() => {
   const datosIniciales = async () => {
@@ -86,7 +82,8 @@ useFocusEffect(
         }
         if(usuarioId){
           const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
-          setFavoritos(resultado.data);
+          const idsFavoritos = resultado.data.map((fav: any) => fav._id);
+          setFavoritos(idsFavoritos);
         }
       }
       catch(error){
@@ -225,10 +222,24 @@ const manejarFavoritos = async (localId: string)=>{
       localId,
       usuarioId
     });
-    alert(resultado.data.message);
+    if (favoritos.includes(localId)) {
+      setFavoritos(favoritos.filter(id => id !== localId));
+    } else {
+      setFavoritos([...favoritos, localId]);
+    }
+    setAlertaFav(true);
+    setAlertaMensaje(resultado.data.message);
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 1500);
   }
   catch(error){
     console.error("Error al gestionar los favoritos", error);
+    setAlertaFav(true);
+    setAlertaMensaje("Hubo el error al guardar en favoritos");
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 2500);
   }
 }
 
@@ -245,7 +256,9 @@ const manejarFavoritos = async (localId: string)=>{
               <Text style={styles.tarjetatexto}>{item.cualificacion}</Text>
             </View>
             <TouchableOpacity onPress={()=> manejarFavoritos(item._id)}>
-              <Image source={require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
+              <Image source={favoritos.includes(item._id)
+                ? require('@/assets/images/iconoFavActivo.png') 
+                : require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
             </TouchableOpacity>
           </View>
           <View style={styles.tarjetaInfo}>
@@ -274,76 +287,74 @@ const manejarFavoritos = async (localId: string)=>{
       </TouchableOpacity>
       <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={false} style={styles.contenedorGeneral}>
         <View style={styles.textos}>
-        <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
-        <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
-      </View>
-      <View style={styles.bloqueBotones}>
-        <View style={styles.contenedorBusqueda}>
-          <TouchableOpacity>
-            <View style={styles.buscadorContainer}>
-              <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={(texto) => setBusqueda(texto)} onSubmitEditing={() => manejarBusqueda(busqueda)} returnKeyType='search'></TextInput>
-              <TouchableOpacity onPress={() => manejarBusqueda(busqueda)}>
-                <Image source={require('@/assets/images/Search.png')} style={styles.icono3}></Image>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-          {busqueda.length > 0 && localesBusqueda.length > 0 && mostrarLista && (
-            <View style={styles.menuBuscador}>
-              <FlatList
-                data={localesBusqueda}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.textoLugar}
-                    onPress={() => {
-                      irLocal(item.latitud, item.longitud); 
-                      // Cierra el desplegable
-                      setLocalesBusqueda([item]); 
-                      // Pone el nombre en el input
-                      setBusqueda(item.nombre); 
-                      setMostrarLista(false);
-                    }}
-                  >
-                    <Text style={styles.textoBold}>{item.nombre}</Text>
-                    <Text style={styles.textoBuscador}>{item.tipo}</Text>
-                    <Image source={require('@/assets/images/Line.png')} style={styles.linea}></Image>
-                  </TouchableOpacity>
-                )}
-                ListFooterComponent={() =>(
-                  <TouchableOpacity onPress={mostrarLocalesCerca}>
-                    <Text>Ver todos los sitios cerca</Text>
-                  </TouchableOpacity>
-                )}
-              /> 
-            </View>
-          )}
+          <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
+          <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
         </View>
-      </View>
-      <View style={styles.container3}>
-        <MapView style={styles.mapa}
-          ref={mapRef}
-          region={region}
-          // Permite que el usuario se mueva libremente después
-          onRegionChangeComplete={setRegion} 
-          provider="google"
-          showsUserLocation={true}>
-          {localesBusqueda.map((local) => (
-          <Marker
-            key={local._id}
-            coordinate={{
-              latitude: local.latitud,
-              longitude: local.longitud,
-            }}
-            image={require('@/assets/images/PIN.png')}
-          >
-          <Callout tooltip={false}>
-            <View style={styles.buscadorContainer}>
-              <Text style={styles.textoBold}>{local.nombre}</Text>
-              <Text>Ver detalles</Text>
-            </View>
-          </Callout>
-        </Marker>
-        ))}
-        </MapView>
+        <View style={styles.bloqueBotones}>
+          <View style={styles.contenedorBusqueda}>
+            <TouchableOpacity>
+              <View style={styles.buscadorContainer}>
+                <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={(texto) => setBusqueda(texto)} onSubmitEditing={() => manejarBusqueda(busqueda)} returnKeyType='search'></TextInput>
+                <TouchableOpacity onPress={() => manejarBusqueda(busqueda)}>
+                  <Image source={require('@/assets/images/Search.png')} style={styles.icono3}></Image>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+            {busqueda.length > 0 && localesBusqueda.length > 0 && mostrarLista && (
+              <View style={styles.menuBuscador}>
+                <FlatList
+                  data={localesBusqueda}
+                  keyExtractor={(item) => item._id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.textoLugar}
+                      onPress={() => {
+                        irLocal(item.latitud, item.longitud); 
+                        // Cierra el desplegable
+                        setLocalesBusqueda([item]); 
+                        // Pone el nombre en el input
+                        setBusqueda(item.nombre); 
+                        setMostrarLista(false);
+                      }}
+                    >
+                      <Text style={styles.textoBold}>{item.nombre}</Text>
+                      <Text style={styles.textoBuscador}>{item.tipo}</Text>
+                      <Image source={require('@/assets/images/Line.png')} style={styles.linea}></Image>
+                    </TouchableOpacity>
+                  )}
+                  ListFooterComponent={() =>(
+                    <TouchableOpacity onPress={mostrarLocalesCerca}>
+                      <Text>Ver todos los sitios cerca</Text>
+                    </TouchableOpacity>
+                  )}
+                /> 
+              </View>
+            )}
+          </View>
+        </View>
+        <View style={styles.container3}>
+          <MapView style={styles.mapa}
+            ref={mapRef}
+            region={region}
+            // Permite que el usuario se mueva libremente después
+            onRegionChangeComplete={setRegion} 
+            provider="google"
+            showsUserLocation={true}>
+            {localesBusqueda.map((local) => (
+            <Marker
+              key={local._id}
+              coordinate={{
+                latitude: local.latitud,
+                longitude: local.longitud,
+              }}
+              image={require('@/assets/images/PIN.png')}
+              onPress={() => {
+                setLocalSeleccionado(local);
+                setModalLocal(true)
+              }}
+            >
+          </Marker>
+          ))}
+          </MapView>
       </View>
       <View style={styles.containerMenu}>
         <TouchableOpacity style={styles.contenedorIconos} onPress={() => filtrarCategoria("Cafetería")}>
@@ -373,7 +384,59 @@ const manejarFavoritos = async (localId: string)=>{
           </View>
         ))}
       </View>
-    </ScrollView>  
+    </ScrollView> 
+    <Modal visible={modalLocal}
+      onRequestClose={() => setModalLocal(false)}
+      animationType="fade"
+      transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque}>
+            {localSeleccionado ? (
+            <TouchableOpacity 
+              style={styles.tarjeta2} 
+              onPress={() => {
+                setModalLocal(false);
+                router.push({ pathname: "/PantallaLocal", params: { id: localSeleccionado._id } });
+              }}
+            >
+            <View style={styles.tarjetaContenedor}>
+              <Image source={{ uri: localSeleccionado.foto }} style={styles.fotoTarjeta2}></Image>    
+              <TouchableOpacity onPress={() => manejarFavoritos(localSeleccionado._id)}>
+                <Image source={require('@/assets/images/favoritosOff.png')} style={styles.iconoFav2}></Image>
+                </TouchableOpacity>              
+                <TouchableOpacity onPress={() => setModalLocal(false)}>
+                  <Image source={require('@/assets/images/volver.png')} style={styles.iconoVolver}></Image>
+                </TouchableOpacity>
+                <View style={styles.tarjetaInfo}>
+                  <Text style={styles.tarjetaTitulo2}>{localSeleccionado.nombre}</Text>
+                  <Text style={styles.tipoTarjeta}>{localSeleccionado.tipo}</Text>
+                  <View style={styles.apartadosTarjeta}>
+                    <Image source={require('@/assets/images/MapPin.png')} style={styles.iconoEstrella}></Image>
+                    <Text style={styles.tarjetaTexto}>{localSeleccionado.direccion}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            /* Vista por si acaso el modal se abre por error sin datos */
+            <View style={styles.modalBloque}>
+              <Text>No se ha seleccionado ningún local</Text>
+            </View>
+          )}
+          </View>
+      </View>
+    </Modal> 
+    <Modal visible={alertaFav}
+      onRequestClose={() => setAlertaFav(false)}
+      animationType="fade"
+      transparent={true}>
+      <View style={styles.modalFondo2}>
+        <View style={styles.modalBloque2}>
+          <Image source={require('@/assets/images/iconoFavGris.png')} style={styles.iconoFav3}></Image>
+          <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+        </View>
+      </View>
+    </Modal>
   </View> 
   );
 }
@@ -395,6 +458,13 @@ const styles = StyleSheet.create({
     flexDirection:"row",
     gap:5
   },
+  iconoVolver:{
+    height:35,
+    width:35,
+    position:"absolute",
+    marginTop: -115,
+    marginLeft:15
+  },
   container3:{
     display:"flex",
   },
@@ -402,6 +472,44 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"column",
     gap:2
+  },
+  iconoFav2:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -50,
+    marginLeft:220
+  },
+  contenedorBotones2:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:55
+  },
+  modalBloque:{
+    backgroundColor:"#FFFFFF",
+    paddingHorizontal:40,
+    paddingTop:15,
+    borderRadius:20,
+    gap:10,
+    width:350,
+    height:300
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:20,
+    width:350,
+    height:60,
+    marginTop:500,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
   },
   tarjeta:{
     borderWidth:1,
@@ -416,10 +524,36 @@ const styles = StyleSheet.create({
     alignSelf:"center",
     margin:0
   },
+  tarjeta2:{
+    padding:10,
+    display:"flex",
+    flexDirection:"column",
+    gap:10,
+    marginBottom:10,
+    width:330,
+    alignSelf:"center",
+    margin:0
+  },
   iconoFav:{
     height:30,
     width:30,
     marginTop:-3
+  },
+  modalFondo:{
+    backgroundColor:"rgba(0,0,0,0.5)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
   },
   contenedorSuperior:{
     display:"flex",
@@ -462,6 +596,10 @@ const styles = StyleSheet.create({
     fontSize:16,
     fontWeight:600
   },
+  tarjetaTitulo2:{
+    fontSize:20,
+    fontWeight:700
+  },
   tarjetatexto:{
     fontSize:12,
     fontWeight:600
@@ -471,18 +609,23 @@ const styles = StyleSheet.create({
   },
   tarjetaTexto:{
     fontSize:12,
-    color:"#9C9696"
+    color:"#6d6464ff"
   },
   fotoTarjeta:{
     width:120,
     height:120,
     borderRadius:10
   },
+  fotoTarjeta2:{
+    width:310,
+    height:120,
+    borderRadius:10
+  },
   tipoTarjeta:{
     borderRadius:30,
     borderWidth:1,
-    borderColor:"#9C9696",
-    color:"#9C9696",
+    borderColor:"#6d6464ff",
+    color:"#6d6464ff",
     width:120,
     padding:3,
     textAlign:"center",
@@ -495,14 +638,14 @@ const styles = StyleSheet.create({
   cajaScroll2:{
     marginLeft:10,
     marginRight:10,
-    height:440,
+    height:430,
     marginTop:15
   },
   menuBuscador:{
     position:"absolute",
     zIndex:1000,
     backgroundColor:"#ffffff",
-    marginTop:55,
+    marginTop:270,
     paddingVertical:25,
     width:320,
     paddingLeft:20,
@@ -559,6 +702,16 @@ const styles = StyleSheet.create({
     flexDirection:"column",
     paddingBottom:20
   },
+  textoNotificacion:{
+    fontSize:16
+  },
+  iconoFav3:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
   mapa:{
     width: 350,
     height: 250,
@@ -585,14 +738,15 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"row",
     gap:20,
-    marginTop:20
+    marginTop:20,
+    marginLeft:5
   },
   textos:{
     display:"flex",
     flexDirection:"column",
     justifyContent:"center",
     marginRight:60, 
-    marginTop:20,
+    marginTop:10,
     textAlign:"center",
     color:"black",
     gap:5
@@ -600,7 +754,6 @@ const styles = StyleSheet.create({
   bloqueBotones:{
     display:"flex",
     flexDirection:"column",
-    marginTop:5,
     marginLeft:10,
     width:330,
     gap:10

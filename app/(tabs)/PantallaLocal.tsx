@@ -22,19 +22,31 @@ interface Local {
   enlace: string;
 }
 
+interface Comentarios {
+  _id: string;
+  usuarioNombre: string;
+  comentario: string;
+  estrellas: number;
+  fecha: string;
+}
+
 export default function PantallaPrincipal() {
-  //Para cambiar entre pantallas
   const router = useRouter();
-  //coger el local de la anterior pantalla
   const { id } = useLocalSearchParams();
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
   const [local, setLocal] = useState<Local | null>(null);
+  const [comentarios, setComentarios] = useState<Comentarios[]>([]);
+  const [favoritos, setFavoritos] = useState<string[]>([]);
+  const [alertaFav, setAlertaFav] = useState(false);
+  const [alertaMensaje, setAlertaMensaje] = useState('');
   
   useEffect(() =>{
     const detallesLocal = async () => {
       try{
         const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/${id}`);
+        const comentarios = await axios.get(`http://10.0.2.2:3000/api/locales/${id}/resenas`);
         setLocal(resultado.data);
+        setComentarios(comentarios.data);
       }
       catch(error){
         console.error("Error al cargar el local: ",error);
@@ -50,9 +62,18 @@ export default function PantallaPrincipal() {
       const nombreUsuario = async () => {
         try {
           const nombre = await AsyncStorage.getItem("nombreUsuario");
+          const usuarioId = await AsyncStorage.getItem("idUsuario");
           if(nombre){
             setNombreUsuario(nombre);
           }
+          if (usuarioId) {
+          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
+          const idsFavoritos = resultado.data.map(
+            (local: Local) => local._id
+          );
+          setFavoritos(idsFavoritos);
+        }
+
         }
         catch(error){
           console.error("Error al cargar el nombre", error);
@@ -64,62 +85,104 @@ export default function PantallaPrincipal() {
 
   if (!local) {
       return (
-        <View>
+        <View style={styles.container}>
           <Text>No se encontraron los datos del local.</Text>
         </View>
       );
     }
 
-    //gestionar favoritos
+  //gestionar favoritos
 const manejarFavoritos = async (localId: string)=>{
   try{
     const usuarioId = await AsyncStorage.getItem("idUsuario");
+    console.log("ID del Local enviado:", localId);
+    console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
     const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",{
       localId,
       usuarioId
     });
-
+    if (favoritos.includes(localId)) {
+      setFavoritos(favoritos.filter(id => id !== localId));
+    } else {
+      setFavoritos([...favoritos, localId]);
+    }
+    setAlertaFav(true);
+    setAlertaMensaje(resultado.data.message);
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 1500);
   }
   catch(error){
     console.error("Error al gestionar los favoritos", error);
+    setAlertaFav(true);
+    setAlertaMensaje("Hubo el error al guardar en favoritos");
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 2500);
   }
 }
 
-  //lo que se va a mostrar en pantalla: uso botones, imágenes y text
+  function notaEstrellas(nota : number){
+    let listaEstrellas = [];
+    for(let i=1; i<=5; i++){
+      if(i <= nota){
+        listaEstrellas.push(
+          <Image key={i} source={require("@/assets/images/estrellaAmarilla.png")} style={styles.iconoEstrellaComentario}></Image>
+        )
+      }
+      else{
+        listaEstrellas.push(
+          <Image key={i} source={require("@/assets/images/estrellaGris.png")} style={styles.iconoEstrellaComentario}></Image>
+        )
+      }
+    }
+    return listaEstrellas;
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <TouchableOpacity style= {styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
+      
+      <TouchableOpacity style={styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
           <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>
-      <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={false} style={styles.contenedorGeneral}>
+
+      <View style={styles.contenedorGeneral}>
         <Image source={{ uri: local.foto }} style={styles.fotoTarjeta}></Image>
-        <TouchableOpacity onPress={() => manejarFavoritos(local._id)}>
-            <Image source={require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
+        
+        <TouchableOpacity onPress={()=> manejarFavoritos(local._id)}>
+          <Image source={
+            favoritos.includes(local._id)
+              ? require('@/assets/images/iconoFavActivo.png')
+              : require('@/assets/images/favoritosOff.png')
+          }
+          style={styles.iconoFav}
+          />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push("/PantallaPrincipal")}>
             <Image source={require('@/assets/images/volver.png')} style={styles.iconoVolver}></Image>
         </TouchableOpacity>
+        
         <View style={styles.tarjetaInfo}>
           <View style={styles.tarjetaCabecera}>
             <Text style={styles.tarjetaTitulo}>{local.nombre}</Text>
-              <Text style={styles.tipoTarjeta}>{local.tipo}</Text>
-              <View style={styles.apartadosTarjeta}>
-                <Image source={require('@/assets/images/MapPin.png')} style={styles.iconoEstrella}></Image>
-                <Text style={styles.tarjetaDireccion}>{local.direccion}</Text>
-              </View>
-              <View style={styles.apartadosTarjeta}>
-                <Image source={require('@/assets/images/Clock.png')} style={styles.iconoEstrella}></Image>
-                <Text style={styles.tarjetatexto}>{local.horario}</Text>
-              </View>
-              <View style={styles.apartadosTarjeta}>
-                <Image source={require('@/assets/images/web.png')} style={styles.iconoEstrella}></Image>
-                <Text style={styles.tarjetatexto}>{local.enlace}</Text>
-              </View>
+            <Text style={styles.tipoTarjeta}>{local.tipo}</Text>
+            <View style={styles.apartadosTarjeta}>
+              <Image source={require('@/assets/images/MapPin.png')} style={styles.iconoEstrella}></Image>
+              <Text style={styles.tarjetaDireccion}>{local.direccion}</Text>
+            </View>
+            <View style={styles.apartadosTarjeta}>
+              <Image source={require('@/assets/images/Clock.png')} style={styles.iconoEstrella}></Image>
+              <Text style={styles.tarjetatexto}>{local.horario}</Text>
+            </View>
+            <View style={styles.apartadosTarjeta}>
+              <Image source={require('@/assets/images/web.png')} style={styles.iconoEstrella}></Image>
+              <Text style={styles.tarjetatexto}>{local.enlace}</Text>
+            </View>
           </View>
           <View style={styles.tarjetaNota}>
             <View style={styles.contenedorNota}>
@@ -129,7 +192,8 @@ const manejarFavoritos = async (localId: string)=>{
             <Text>Cualificación</Text>
           </View> 
         </View>
-        <View>
+
+        <View style={styles.bloqueInferior}>
           <View style={styles.contenedorComentario}>
             <Text style={styles.tarjetaTitulo2}>Comentarios</Text>
             <TouchableOpacity style={styles.contenedorResena}>
@@ -137,57 +201,144 @@ const manejarFavoritos = async (localId: string)=>{
               <Text style={styles.tarjetatextoSec}>Reseña</Text>
             </TouchableOpacity>
           </View>
-          
+
+          <ScrollView 
+            nestedScrollEnabled={true} 
+            showsVerticalScrollIndicator={false} 
+            style={styles.contenedorComentarios}
+          >
+              {comentarios.length === 0 ? (
+                <Text style={{ textAlign: 'center', marginTop: 10 }}>
+                  Nadie ha comentado aún.
+                </Text>
+              ) : (
+                comentarios.map((item) => (
+                  <View style={styles.tarjeta} key={item._id}>
+                    <View style={styles.contenedor2}>
+                      <Text style={styles.textoBold}>{item.usuarioNombre}</Text>
+                      <View style={styles.contenedorEstrella}>{notaEstrellas(item.estrellas)}</View>
+                    </View>
+                    <View style={styles.contenedor1}>
+                      <Text style={styles.textoDescripcion2}>"{item.comentario}"</Text>
+                      <Text style={styles.textoDescripcion3}>{new Date(item.fecha).toLocaleDateString()}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
         </View>
-    </ScrollView>  
-  </View> 
+      </View> 
+      <Modal visible={alertaFav}
+        onRequestClose={() => setAlertaFav(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/iconoFavGris.png')} style={styles.iconoFav}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal> 
+    </View> 
   );
 }
 
-//estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
     backgroundColor: "white",
   },
-  container2: {
-    flex: 1,
-    alignItems: "center",
-    marginTop:10
+  contenedor2: {
+    display:"flex",
+    flexDirection:"row",
+    width:290,
+    justifyContent:"space-between",
+    marginTop:10,
+    gap:50,
+    alignItems:"center",
+    marginLeft:5
+    
   },
   container3:{
     display:"flex",
   },
+  contenedorEstrella:{
+    display:"flex",
+    flexDirection:"row",
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:500,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
+  },
+  textoNotificacion:{
+    fontSize:16
+  },
   tarjeta:{
+    display:"flex",
     borderWidth:1,
     borderColor:"#9C9696",
     borderRadius:20,
     padding:10,
-    display:"flex",
-    flexDirection:"row",
-    gap:10,
+    flexDirection:"column",
     marginBottom:10,
-    width:330,
+    width:320,
     alignSelf:"center",
-    margin:0
+  },
+  contenedorComentarios:{
+    width:320,
+    marginTop:15,
+    maxHeight: 220, 
+    alignSelf: "center"
+  },
+  bloqueInferior:{
+    flexDirection:"column",
+    gap:5,
+    flex: 1
+  },
+  contenedor1:{
+    flexDirection:"column",
+    width:210, 
+    alignItems:"flex-start",
+    justifyContent:"flex-start",
+    gap:5,
+    marginLeft:5
   },
   contenedorComentario:{
     marginTop:25,
-    display:"flex",
     flexDirection:"row",
     alignItems:"center",
-    gap:140
+    justifyContent: "space-between",
+    width: 320,
+    alignSelf: "center"
   },
   apartadosTarjeta:{
-    display:"flex",
     flexDirection:"row",
     alignItems:"center",
     gap:10
   },
   tarjetaNota:{
     marginTop:10,
-    display:"flex",
     flexDirection:"column",
     alignItems:"center",
     gap:5
@@ -197,25 +348,37 @@ const styles = StyleSheet.create({
     width:30,
     position:"absolute",
     marginTop: -40,
-    marginLeft:285
+    marginLeft:315
+  },
+  iconoEditar:{
+    height:15,
+    width:15
+  },
+  textoDescripcion3: { 
+    color:"#110501",     
+    fontSize: 13,
+    marginBottom: 5,    
   },
   iconoVolver:{
     height:35,
     width:35,
     position:"absolute",
     marginTop: -140,
-    marginLeft:15
+    marginLeft:40
   },
   iconoEstrella:{
     height:20,
     width:20,
+  },
+  iconoEstrellaComentario: {
+    height: 14, 
+    width: 14,
   },
   iconoMas:{
     height:15,
     width:15,
   },
   contenedorResena:{
-    display:"flex",
     flexDirection:"row",
     alignItems:"center",
     gap:5,
@@ -223,10 +386,8 @@ const styles = StyleSheet.create({
     paddingHorizontal:15,
     paddingVertical:5,
     borderRadius:20,
-    alignSelf:"flex-end"
   },
    contenedorNota:{
-    display:"flex",
     flexDirection:"row",
     alignItems:"center",
     gap:5,
@@ -237,26 +398,26 @@ const styles = StyleSheet.create({
     alignSelf:"flex-end"
   },
   tarjetaInfo:{
-    display:"flex",
     flexDirection:"row",
     gap:10,
-    marginTop:10
+    marginTop:10,
+    width: 320,
+    alignSelf: "center"
   },
   tarjetaCabecera:{
-    display:"flex",
     flexDirection:"column",
     alignItems:"flex-start",
     gap:10,
-    width:240,
+    width:230,
     marginTop:10
   },
   tarjetaTitulo:{
     fontSize:20,
-    fontWeight:600
+    fontWeight: "600"
   },
   tarjetaTitulo2:{
     fontSize:18,
-    fontWeight:600
+    fontWeight: "600"
   },
   tarjetaDescripcion:{
 
@@ -266,7 +427,7 @@ const styles = StyleSheet.create({
   },
   tarjetaDireccion:{
     fontSize:12,
-    color:"#9C9696"
+    color:"#6d6464ff"
   },
   tarjetatexto:{
     fontSize:12
@@ -280,13 +441,14 @@ const styles = StyleSheet.create({
     height:150,
     borderRadius:10,
     marginTop:5,
-    position:"relative"
+    position:"relative",
+    alignSelf: "center"
   },
   tipoTarjeta:{
     borderRadius:30,
     borderWidth:1,
-    borderColor:"#9C9696",
-    color:"#9C9696",
+    borderColor:"#6d6464ff",
+    color:"#6d6464ff",
     width:120,
     padding:3,
     textAlign:"center",
@@ -294,7 +456,9 @@ const styles = StyleSheet.create({
     
   },
   contenedorGeneral:{
-    margin:3,
+    flex: 1,
+    width: '100%',
+    margin: 3,
   },
   cajaScroll2:{
     marginLeft:10,
@@ -337,14 +501,12 @@ const styles = StyleSheet.create({
     paddingHorizontal:30,
     paddingVertical:2,
     width:320,
-    display:"flex",
     flexDirection:"row",
     alignItems:"center",
     justifyContent:"space-between"
   },
   contenedorBusqueda:{
     marginBottom:10
-
   },
   linea:{
     width:280,
@@ -355,7 +517,6 @@ const styles = StyleSheet.create({
 
   },
   textoLugar:{
-    display:"flex",
     flexDirection:"column",
     paddingBottom:20
   },
@@ -365,30 +526,27 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   containerCabecera:{
-    display:"flex",
     flexDirection:"row",
-    gap:160,
+    justifyContent: "space-between", 
+    width: 320,
     marginTop:60
   },
   contenedorCuenta:{
-    display:"flex",
     flexDirection:"column",
-    gap:5
+    gap:5,
+    alignItems: "center"
   },
   contenedorIconos:{
-    display:"flex",
     flexDirection:"column",
     alignItems:"center",
     gap:4
   },
   containerMenu:{
-    display:"flex",
     flexDirection:"row",
     gap:20,
     marginTop:20
   },
   textos:{
-    display:"flex",
     flexDirection:"column",
     justifyContent:"center",
     marginRight:60, 
@@ -398,7 +556,6 @@ const styles = StyleSheet.create({
     gap:5
   },
   bloqueBotones:{
-    display:"flex",
     flexDirection:"column",
     marginTop:5,
     alignItems:"flex-end",
@@ -410,7 +567,6 @@ const styles = StyleSheet.create({
   },
   botonfiltro:{
     backgroundColor:"#110501",
-    display:"flex",
     flexDirection:"row",
     gap:10,
     paddingHorizontal:20,
@@ -425,13 +581,12 @@ const styles = StyleSheet.create({
   },
   textoDescripcion: {
     textAlign: "center", 
-    color:"#110501",     
+    color:"#110501",    
     fontSize: 12,
     marginBottom: 5,    
   },
-  textoDescripcion2: {
-    textAlign: "center", 
-    color:"#110501",     
+  textoDescripcion2: { 
+    color:"#110501",    
     fontSize: 14,
     marginBottom: 5,    
   },
@@ -448,8 +603,7 @@ const styles = StyleSheet.create({
     width:15
   },
   foto: {
-    marginLeft:-40,
-    width: 150,
+    width: 120, 
     resizeMode: "contain"
   },
   foto2: {
@@ -459,10 +613,10 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   textoBold:{
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    fontSize: 16
   },
   containerFotos:{
-    display: "flex",
     flexDirection: "column",
     alignItems: "center",
     marginTop: 70

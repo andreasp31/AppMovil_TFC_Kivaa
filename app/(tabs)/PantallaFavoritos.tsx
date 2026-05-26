@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
-import {StyleSheet, View, TouchableOpacity, Text,FlatList} from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text,FlatList, Modal} from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import React,{ useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +25,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
   const [favoritos, setFavoritos] = useState<Local[]>([]);
+  const [alertaFav, setAlertaFav] = useState(false);
+  const [alertaMensaje, setAlertaMensaje] = useState('');
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   
   useFocusEffect(
@@ -59,10 +61,22 @@ const manejarFavoritos = async (localId: string)=>{
       localId,
       usuarioId
     });
-    alert(resultado.data.message);
+    setFavoritos(
+      favoritos.filter(local => local._id !== localId)
+    );
+    setAlertaFav(true);
+    setAlertaMensaje(resultado.data.message);
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 1500);
   }
   catch(error){
     console.error("Error al gestionar los favoritos", error);
+    setAlertaFav(true);
+    setAlertaMensaje("Hubo el error al guardar en favoritos");
+    setTimeout(() => {
+      setAlertaFav(false);
+    }, 2500);
   }
 }
 
@@ -93,7 +107,9 @@ const manejarFavoritos = async (localId: string)=>{
                       <Text style={styles.tarjetatexto}>{item.cualificacion}</Text>
                     </View>
                     <TouchableOpacity onPress={()=> manejarFavoritos(item._id)}>
-                      <Image source={require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
+                      <Image source={favoritos.some(local => local._id === item._id)
+                        ? require('@/assets/images/iconoFavActivo.png') 
+                        : require('@/assets/images/favoritosOff.png')} style={styles.iconoFav}></Image>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.tarjetaInfo}>
@@ -109,8 +125,19 @@ const manejarFavoritos = async (localId: string)=>{
           )}
         />
       )}
-
+      <Modal visible={alertaFav}
+        onRequestClose={() => setAlertaFav(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/iconoFavGris.png')} style={styles.iconoFav2}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal>
     </View>  
+    
   );
 }
 
@@ -135,6 +162,13 @@ const styles = StyleSheet.create({
     margin:0,
     marginTop:5
   },
+  iconoFav2:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
   tipoTarjeta:{
     borderRadius:30,
     borderWidth:1,
@@ -149,6 +183,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     marginTop:10
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  textoNotificacion:{
+    fontSize:16
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:500,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
   },
   apartadosTarjeta:{
     display:"flex",
