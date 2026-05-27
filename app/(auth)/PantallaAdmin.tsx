@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import {StyleSheet, View, TouchableOpacity, Text, Modal } from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import React,{ useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,14 @@ export default function PantallaAdmin() {
   const [numeroUsuarios, setNumeroUsuarios] = useState<number>(0);
   const [modalNuevoLocal, setModalNuevoLocal] = useState(false);
   const [modalCerrarSesion, setCerrarSesion] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [tipoLocal, setTipoLocal] = useState('');
+  const [direccionLocal, setDireccionLocal] = useState('');
+  const [webLocal, setWebLocal] = useState('');
+  const [latitudLocal, setLatitudLocal] = useState('');
+  const [longitudLocal, setLongitudLocal] = useState('');
+  const [horarioLocal, setHorarioLocal] = useState('');
+  const [fotoLocal, setFotoLocal] = useState('');
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
 
   useEffect(()=>{
@@ -66,9 +74,9 @@ export default function PantallaAdmin() {
           <Text style={styles.textoDescripcion}>Total de Usuarios</Text>
         </View>
       </View>
-      <Text>Menu</Text>
+      <Text style={styles.textoNombreApartado}>Menu</Text>
       <View style={styles.contenedorGeneral}>
-        <TouchableOpacity  style={styles.contenedorInfo2}>
+        <TouchableOpacity  style={styles.contenedorInfo2} onPress={() => setModalNuevoLocal(true)}>
           <Image source={require('@/assets/images/nuevoLocal.png')} style={styles.iconos}></Image>
           <View style={styles.contenedorTexto}>
             <Text style={styles.datosInfo}>Añadir Local</Text>
@@ -116,6 +124,64 @@ export default function PantallaAdmin() {
             </View>
           </View>
       </Modal>
+      <Modal visible={modalNuevoLocal}
+      onRequestClose={() => setModalNuevoLocal(false)}
+      animationType="fade"
+      transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque}>
+            <Text style={styles.datosInfo}>Nuevo Local</Text>
+            <View style={styles.subContenedor}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Nombre</Text>
+                <TextInput style={styles.input1} placeholder='Nombre' value={nombre} onChangeText={setNombre}></TextInput>
+              </View>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Tipo</Text>
+                <TextInput style={styles.input1} placeholder='Tipo de local' value={tipoLocal} onChangeText={setTipoLocal}></TextInput>
+              </View>
+            </View>
+            <View style={styles.subContenedor}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Dirección</Text>
+                <TextInput style={styles.input1} placeholder='Introduce la dirección...' value={direccionLocal} onChangeText={setDireccionLocal}></TextInput>
+              </View>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Página Web</Text>
+                <TextInput style={styles.input1} placeholder='Introduce la web' value={webLocal} onChangeText={setWebLocal}></TextInput>
+              </View>
+            </View>
+            <View style={styles.subContenedor}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Latitud</Text>
+                <TextInput style={styles.input1} placeholder='Introduce la latitud...' value={latitudLocal} onChangeText={setLatitudLocal}></TextInput>
+              </View>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Longitud</Text>
+                <TextInput style={styles.input1} placeholder='Introduce la longitud' value={longitudLocal} onChangeText={setLongitudLocal}></TextInput>
+              </View>
+            </View>
+            <View style={styles.subContenedor}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Horario</Text>
+                <TextInput style={styles.input1} placeholder='Introduce el horario...' value={horarioLocal} onChangeText={setHorarioLocal}></TextInput>
+              </View>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Foto</Text>
+                <TextInput style={styles.input1} placeholder='Selecciona una foto' value={fotoLocal} onChangeText={setFotoLocal}></TextInput>
+              </View>
+            </View>
+            <View style = {styles.contenedorBotones2}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setCerrarSesion(false)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
+                <Text>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>  
     
   );
@@ -138,6 +204,9 @@ const styles = StyleSheet.create({
     width:400,
     height:60,
     marginTop:-50
+  },
+  texto:{
+    fontSize:15
   },
   iconos:{
     height:70,
@@ -234,11 +303,29 @@ const styles = StyleSheet.create({
     fontSize:20,
     fontWeight:700
   },
+  input1:{
+    borderColor:"#110501",
+    borderWidth: 1,
+    borderRadius: 20,
+    width:140,
+    height:50,
+    paddingLeft:15,
+  },
   contenedorIconos:{
     display:"flex",
     flexDirection:"column",
     alignItems:"center",
     gap:4
+  },
+  subContenedor:{
+    display:"flex",
+    flexDirection:"row",
+    gap:15
+  },
+  subContenedor0:{
+    display:"flex",
+    flexDirection:"column",
+    gap:8
   },
   containerMenu:{
     display:"flex",
@@ -260,6 +347,12 @@ const styles = StyleSheet.create({
   },
   textoDescripcion: {
     textAlign: "center", 
+    color:"#110501",     
+    fontSize: 12,
+    marginBottom: 5,    
+  },
+  textoNombreApartado: {
+    textAlign: "left", 
     color:"#110501",     
     fontSize: 12,
     marginBottom: 5,    

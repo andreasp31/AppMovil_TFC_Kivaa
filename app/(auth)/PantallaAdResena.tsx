@@ -3,6 +3,7 @@ import {StyleSheet, View, TouchableOpacity, Text, Modal, TextInput} from 'react-
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import React,{ useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 interface Local {
   _id: string;
@@ -36,6 +37,8 @@ export default function PantallaAdminResena() {
         const nombre = await AsyncStorage.getItem("nombreUsuario");
         if(nombre){
           setNombreUsuario(nombre);
+          const resultados = await axios.get(`http://10.0.2.2:3000/api/locales`);
+          setLocales(resultados.data);
         }
       }
       catch(error){
@@ -49,7 +52,7 @@ export default function PantallaAdminResena() {
   const tarjeta = ({ item }:{item : Local}) => {
       console.log("Datos de la tarjeta:", item);
       return(
-        <TouchableOpacity style={styles.tarjeta} onPress={() => router.push({pathname:"/PantallaLocal", params:{id: item._id}})}>
+        <TouchableOpacity style={styles.tarjeta} onPress={() => router.push({pathname:"/PantallaAdLocal", params:{id: item._id}})}>
           <Image source={{ uri: item.foto }} style={styles.fotoTarjeta}/>
           <View style={styles.tarjetaContenedor}>
             <View style={styles.contenedorSuperior}>
@@ -102,7 +105,7 @@ export default function PantallaAdminResena() {
       <View style={styles.contenedorGeneral}>
       </View>
       <View style={styles.cajaScroll2}>
-        {localesBusqueda.map((local) => (
+        {locales.map((local) => (
           <View key={local._id}>
             {tarjeta({ item: local })}
           </View>
