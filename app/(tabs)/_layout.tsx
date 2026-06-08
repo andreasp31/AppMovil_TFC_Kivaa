@@ -22,7 +22,7 @@ export default function TabLayout() {
           elevation:0,
           shadowOpacity: 0,
           position: 'absolute',
-
+          marginBottom:20
         },
         headerShown: false, // Para que no salga el título arriba
       }}>
@@ -136,6 +136,13 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="PantallaAdResena"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaAdLocal"
         options={{
           href: null,
           tabBarItemStyle: { display: 'none' },

@@ -1,9 +1,19 @@
 import { Image } from 'expo-image';
 import { KivaaBoton } from '../../components/KivaaBoton';
-import {StyleSheet, View, TouchableOpacity, Text, Modal } from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
 import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import React,{ useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+interface Usuario {
+  _id: string;
+  nombre: string;
+  apellidos: string;
+  email: string;
+  role: string;
+  clave: string;
+}
 
 export default function PantallaPerfil() {
   //Para cambiar entre pantallas
@@ -13,6 +23,15 @@ export default function PantallaPerfil() {
   const [correoUsuario, setCorreoUsuario] = useState('');
   const [claveUsuario, setClaveUsuario] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible2, setModalVisible2] = useState(false);
+  const [modalVisible3, setModalVisible3] = useState(false);
+  const [nombreEditar, setNombreEditar] = useState('');
+  const [apellidosEditar, setApellidosEditar] = useState('');
+  const [correoEditar, setCorreoEditar] = useState('');
+  const [claveEditar, setClaveEditar] = useState('');
+  const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [alertaBorrar, setAlertaBorrar] = useState(false);
+  const [usuarioSeleccionada, setUsuarioSeleccionada] = useState<Usuario | null>(null);
 
   useFocusEffect(
   useCallback(()=>{
@@ -46,7 +65,58 @@ export default function PantallaPerfil() {
     };
     datosUsuario();
   }, [])
-)
+);
+
+const actualizarPerfil = async () => {
+  try{
+    const usuarioId = await AsyncStorage.getItem("idUsuario");
+    await AsyncStorage.setItem("nombreUsuario", nombreEditar);
+    await AsyncStorage.setItem("apellidosUsuario", apellidosEditar);
+    await AsyncStorage.setItem("emailUsuario", correoEditar);
+    await AsyncStorage.setItem("claveUsuario", claveEditar);
+
+    setNombreUsuario(nombreEditar);
+    setApellidosUsuario(apellidosEditar);
+
+    const posicionArroba = correoEditar.indexOf("@");
+    const nombreCortado = correoEditar.substring(0, 2);
+    const dominio = correoEditar.substring(posicionArroba);
+    setCorreoUsuario(nombreCortado + "****" + dominio);
+    setClaveUsuario("*******");
+
+    setModalVisible2(false);
+    alert("Perfil actualizado correctamente");
+  }
+  catch(error){
+    console.error("Error al actualizar el perfil", error);
+    alert("Hubo un error al guardar los cambios");
+  }
+};
+
+const borrarUsuario = async() => {
+  try{
+    const usuarioId = await AsyncStorage.getItem("idUsuario");
+    if (!usuarioId) {
+      setAlertaMensaje("No se encontró el Id del usuario.");
+      setAlertaBorrar(true);
+      return;
+    }
+    const respuesta = await axios.delete(`http://10.0.2.2:3000/api/usuarios/eliminar/${usuarioId}`);
+    if (respuesta.status === 200 || respuesta.status === 204) {
+        setAlertaMensaje("Tu cuenta ha sido eliminada correctamente.");
+        setAlertaBorrar(true);
+        //Borrar en local por seguridad
+        await AsyncStorage.clear()
+        setTimeout(() => {
+          setAlertaBorrar(false);
+          router.replace("/PantallaHome");
+        }, 1800);
+      }
+  }
+  catch(error){
+    console.error("Error al borrar la reseña: ", error);
+  }
+}
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
   return (
     <View style={styles.container}>
@@ -58,6 +128,9 @@ export default function PantallaPerfil() {
           <Text style={styles.textoDescripcion}>Salir</Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity onPress={() => router.push("/PantallaPrincipal")}>
+        <Image source={require('@/assets/images/volver.png')} style={styles.iconoVolver}></Image>
+      </TouchableOpacity>
       <View style = {styles.contenedorTexto}>
         <Text style={styles.titulos}>Mi Cuenta</Text>
         <Text style={styles.textoDescripcion2}>Modifica los datos de tu perfil</Text>
@@ -103,13 +176,24 @@ export default function PantallaPerfil() {
         </View>
       </View>
       <View style = {styles.contenedorBotones}>
-        <TouchableOpacity style = {styles.Boton1}>
+        <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible3(true)}>
           <Text>Eliminar Cuenta</Text>
         </TouchableOpacity>
         <TouchableOpacity style = {styles.Boton2}>
           <Text>Actualizar</Text>
         </TouchableOpacity>
       </View>
+      <Modal visible={alertaBorrar}
+        onRequestClose={() => setAlertaBorrar(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/alertBorrar.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
         animationType="fade"
@@ -129,6 +213,53 @@ export default function PantallaPerfil() {
             </View>
           </View>
       </Modal>
+      <Modal visible={modalVisible2}
+        onRequestClose={() => setModalVisible2(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque}>
+             <Text style={styles.textoDescripcion4}>Edita tus datos del perfil</Text>
+            <View style={styles.contenedorComentario2}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Nombre</Text>
+                <TextInput style={styles.input1} placeholder='Introduce tu nombre' value={nombreEditar} onChangeText={setNombreEditar}
+                  multiline={true}           
+                  numberOfLines={5}     
+                  maxLength={300}>
+                </TextInput>
+              </View>
+            </View>
+            <View style = {styles.contenedorBotones2}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible2(false)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2}>
+                <Text>Actualizar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={modalVisible3}
+        onRequestClose={() => setModalVisible3(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque3}>
+            <Text style={styles.titulos2}>Eliminar Cuenta</Text>
+            <Text style={styles.textoDescripcion4}>¿Seguro que quieres borrar esta usuario?</Text>
+          <View style = {styles.contenedorBotones2}>
+            <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible3(false)}>
+              <Text>No, cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style = {styles.Boton2} onPress={() => borrarUsuario()}>
+              <Text>Sí, borrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+      </Modal>
     </View>  
   );
 }
@@ -139,6 +270,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     backgroundColor: "white",
+  },
+  iconoVolver:{
+    height:35,
+    width:35,
+    marginRight:280
+  },
+  iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
   },
   container2: {
     flex: 1,
@@ -151,6 +294,68 @@ const styles = StyleSheet.create({
     paddingVertical:10,
     borderRadius:30
   },
+  textoNotificacion:{
+    fontSize:16
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:500,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
+  },
+  subContenedor0:{
+    display:"flex",
+    flexDirection:"column",
+    gap:8,
+    marginTop:10
+  },
+  titulos2:{
+    fontWeight: 'bold',
+    fontSize: 25,
+    alignSelf:"center",
+    marginBottom:20
+  },
+  texto:{
+    fontSize:15
+  },
+  input1:{
+    borderColor:"#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    width:300,
+    height:100,
+    paddingLeft:15,
+    textAlignVertical: 'top',
+  },
+  textoDescripcion4: { 
+    color:"#110501",    
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign:"center"    
+  },
+  contenedorComentario2:{
+    display:"flex",
+    flexDirection:"column",
+    gap:10
+  },
   modalFondo:{
     backgroundColor:"rgba(0,0,0,0.5)",
     display:"flex",
@@ -162,6 +367,12 @@ const styles = StyleSheet.create({
   modalBloque:{
     backgroundColor:"#FFFFFF",
     padding:40,
+    borderRadius:20,
+    gap:10
+  },
+  modalBloque3:{
+    backgroundColor:"#FFFFFF",
+    padding:30,
     borderRadius:20,
     gap:10
   },
@@ -194,7 +405,7 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"row",
     marginTop:20,
-    gap:55
+    gap:25
   },
   contenedorInferior:{
     display:"flex",
@@ -223,7 +434,8 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"column",
     alignSelf:"flex-start",
-    marginLeft:40
+    marginLeft:40,
+    marginTop:20
   },
   contenedorSalir:{
     display:"flex",

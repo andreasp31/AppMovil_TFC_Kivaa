@@ -16,7 +16,7 @@ interface Local {
   latitud: number;   
   longitud: number;  
   descripcion?: string;
-  cualificacion?: number;
+  calificacion?: number;
   foto?: string;
   horario: string;
   enlace: string;
@@ -39,6 +39,12 @@ export default function PantallaPrincipal() {
   const [favoritos, setFavoritos] = useState<string[]>([]);
   const [alertaFav, setAlertaFav] = useState(false);
   const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [opinion, setOpinion] = useState('');
+  const [notaestrellas, setNotaEstrellas] = useState(0);
+  const estrellas = [1,2,3,4,5];
+  const [idUsuario, setIdUsuario] = useState<String | null>(null);
+  const [alertaActualizar, setAlertaActualizar] = useState(false);
   
   useEffect(() =>{
     const detallesLocal = async () => {
@@ -67,6 +73,7 @@ export default function PantallaPrincipal() {
             setNombreUsuario(nombre);
           }
           if (usuarioId) {
+          setIdUsuario(usuarioId);
           const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
           const idsFavoritos = resultado.data.map(
             (local: Local) => local._id
@@ -119,6 +126,44 @@ const manejarFavoritos = async (localId: string)=>{
     setTimeout(() => {
       setAlertaFav(false);
     }, 2500);
+  }
+}
+
+const guardarResena = async() => {
+  if (opinion.trim() === "") {
+    setAlertaMensaje("Por favor, introduce un comentario antes de publicar.");
+    setAlertaActualizar(true);
+    return;
+  }
+  try{
+    const nuevaResena = {
+      localId : id,
+      usuarioId: idUsuario,
+      usuarioNombre: nombreUsuario,
+      comentario: opinion,
+      estrellas: notaestrellas,
+      fecha: new Date().toISOString() 
+    };
+    console.log(nuevaResena)
+    const respuesta = await axios.post(`http://10.0.2.2:3000/api/locales/resena`, nuevaResena);
+    if (respuesta.status === 200 || respuesta.status === 201) {
+      setComentarios([respuesta.data, ...comentarios]);
+      setModalVisible(false);
+      setOpinion('');
+      setNotaEstrellas(0); 
+      
+      setAlertaActualizar(true);
+      setAlertaMensaje("Se ha creado correctamente la reseña.")
+
+      setAlertaActualizar(true);
+      setTimeout(() => {
+        setAlertaActualizar(false);
+      }, 1500);
+    }
+
+  }
+  catch(error){
+    console.error("Error al publicar la reseña: ", error);
   }
 }
 
@@ -187,16 +232,16 @@ const manejarFavoritos = async (localId: string)=>{
           <View style={styles.tarjetaNota}>
             <View style={styles.contenedorNota}>
               <Image source={require('@/assets/images/star_filled.png')} style={styles.iconoEstrella}></Image>
-              <Text style={styles.tarjetatexto}>{local.cualificacion}</Text>
+              <Text style={styles.tarjetatexto}>{local.calificacion}</Text>
             </View>
-            <Text>Cualificación</Text>
+            <Text>Calificación</Text>
           </View> 
         </View>
 
         <View style={styles.bloqueInferior}>
           <View style={styles.contenedorComentario}>
             <Text style={styles.tarjetaTitulo2}>Comentarios</Text>
-            <TouchableOpacity style={styles.contenedorResena}>
+            <TouchableOpacity style={styles.contenedorResena} onPress={() => setModalVisible(true)}>
               <Image source={require('@/assets/images/Plus.png')} style={styles.iconoMas}></Image>
               <Text style={styles.tarjetatextoSec}>Reseña</Text>
             </TouchableOpacity>
@@ -239,6 +284,63 @@ const manejarFavoritos = async (localId: string)=>{
           </View>
         </View>
       </Modal> 
+      <Modal visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque}>
+            <Text style={styles.titulos}>{local.nombre}</Text>
+            <Text style={styles.textoDescripcion4}>Añade una valoración para que otras personas puedan conocer tu opinión!</Text>
+            <View style={styles.contenedorComentario2}>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Comentario</Text>
+                <TextInput style={styles.input1} placeholder='Introduce tu opinión' value={opinion} onChangeText={setOpinion}
+                multiline={true}           
+                numberOfLines={5}     
+                maxLength={300}>
+                </TextInput>
+              </View>
+              <View style={styles.subContenedor0}>
+                <Text style={styles.texto}>Nota</Text>
+                <View style={styles.filaEstrellas}>
+                  {estrellas.map((numeroEstrella) =>{
+                    const estrellaActiva = numeroEstrella <= notaestrellas;
+                    return(
+                      <TouchableOpacity key={numeroEstrella} onPress={() => setNotaEstrellas(numeroEstrella)} style={styles.estrellaFormulario}>
+                      <Image source={
+                        estrellaActiva
+                        ? require('@/assets/images/estrellaAmarilla.png')
+                        : require('@/assets/images/estrellaGris.png')
+                      } style={styles.iconoEstrella}></Image>
+                    </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+            <View style = {styles.contenedorBotones2}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible(false)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => guardarResena()}>
+                <Text>Publicar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+       </View>
+      </Modal>
+      <Modal visible={alertaActualizar}
+        onRequestClose={() => setAlertaActualizar(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/editAlerta.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal>
     </View> 
   );
 }
@@ -258,7 +360,44 @@ const styles = StyleSheet.create({
     gap:50,
     alignItems:"center",
     marginLeft:5
-    
+  },
+  estrellaFormulario:{
+    padding:3
+  },
+  contenedorComentario2:{
+    display:"flex",
+    flexDirection:"column",
+    gap:10
+  },
+  iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
+  subContenedor0:{
+    display:"flex",
+    flexDirection:"column",
+    gap:8,
+    marginTop:10
+  },
+  texto:{
+    fontSize:15
+  },
+  filaEstrellas:{
+    display:"flex",
+    flexDirection:"row",
+    gap:5
+  },
+  input1:{
+    borderColor:"#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    width:300,
+    height:100,
+    paddingLeft:15,
+    textAlignVertical: 'top',
   },
   container3:{
     display:"flex",
@@ -275,6 +414,41 @@ const styles = StyleSheet.create({
     alignItems:"center",
     height:750,
   },
+  modalFondo:{
+    backgroundColor:"rgba(0,0,0,0.5)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  contenedorBotones2:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:35
+  },
+  Boton1:{
+    borderWidth:1,
+    paddingHorizontal:25,
+    paddingVertical:10,
+    borderRadius:30
+  },
+  Boton2:{
+    paddingHorizontal:45,
+    paddingVertical:10,
+    borderRadius:30,
+    backgroundColor:"#FAD934"
+  },
+  modalBloque:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10,
+    width:350,
+    display:"flex",
+    alignItems:"center"
+  },
   modalBloque2:{
     display:"flex",
     flexDirection:"row",
@@ -286,7 +460,7 @@ const styles = StyleSheet.create({
     gap:40,
     width:350,
     height:60,
-    marginTop:500,
+    marginTop:600,
     alignContent:"flex-start",
     justifyContent:"flex-start",
     alignItems:"center"
@@ -589,6 +763,12 @@ const styles = StyleSheet.create({
     color:"#110501",    
     fontSize: 14,
     marginBottom: 5,    
+  },
+  textoDescripcion4: { 
+    color:"#110501",    
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign:"center"    
   },
   icono:{
     height:50,

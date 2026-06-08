@@ -16,7 +16,7 @@ interface Local {
   latitud: number;   
   longitud: number;  
   descripcion?: string;
-  cualificacion?: number;
+  calificacion?: number;
   foto?: string;
 }
 
@@ -30,7 +30,7 @@ export default function PantallaPrincipal() {
   const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
   const [mostrarLista, setMostrarLista] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(true);
-  const [titulosResultados, setTitulosResultados] = useState("Buscar Local");
+  const [titulosResultados, setTitulosResultados] = useState("");
   const [favoritos, setFavoritos] = useState<string[]>([]);
   const [modalLocal, setModalLocal] = useState(false);
   const [alertaFav, setAlertaFav] = useState(false);
@@ -125,6 +125,20 @@ useFocusEffect(
       setLocalesBusqueda([]);
       return;
     }
+    const palabraCategorias = ["cafetería","panadería","supermercado","restaurante"];
+    const busquedaCategorias = palabraCategorias.find(p => textoMinusculas.includes(p));
+    if(busquedaCategorias){
+      let categoriaFiltro = busquedaCategorias;
+      if (busquedaCategorias === "cafeteria") categoriaFiltro = "cafetería";
+      if (busquedaCategorias === "panaderia") categoriaFiltro = "panadería";
+      if (busquedaCategorias === "supermercado") categoriaFiltro = "supermercado";
+      if (busquedaCategorias === "restaurante") categoriaFiltro = "restaurante";
+      filtrarCategoria(categoriaFiltro);
+      setMostrarLista(false);
+      return;
+    }
+
+
     const palabrasCerca = ["cerca", "aquí", "sin gluten"];
     const busquedaCerca = palabrasCerca.some(p => textoMinusculas.includes(p));
     const busquedas =[];
@@ -253,7 +267,7 @@ const manejarFavoritos = async (localId: string)=>{
           <View style={styles.contenedorSuperior}>
             <View style={styles.contenedorNota}>
               <Image source={require('@/assets/images/star_filled.png')} style={styles.iconoEstrella}></Image>
-              <Text style={styles.tarjetatexto}>{item.cualificacion}</Text>
+              <Text style={styles.tarjetatexto}>{item.calificacion}</Text>
             </View>
             <TouchableOpacity onPress={()=> manejarFavoritos(item._id)}>
               <Image source={favoritos.includes(item._id)
@@ -305,6 +319,8 @@ const manejarFavoritos = async (localId: string)=>{
                 <FlatList
                   data={localesBusqueda}
                   keyExtractor={(item) => item._id}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
                   renderItem={({ item }) => (
                     <TouchableOpacity style={styles.textoLugar}
                       onPress={() => {
@@ -407,7 +423,7 @@ const manejarFavoritos = async (localId: string)=>{
                 <TouchableOpacity onPress={() => setModalLocal(false)}>
                   <Image source={require('@/assets/images/volver.png')} style={styles.iconoVolver}></Image>
                 </TouchableOpacity>
-                <View style={styles.tarjetaInfo}>
+                <View style={styles.tarjetaInfo2}>
                   <Text style={styles.tarjetaTitulo2}>{localSeleccionado.nombre}</Text>
                   <Text style={styles.tipoTarjeta}>{localSeleccionado.tipo}</Text>
                   <View style={styles.apartadosTarjeta}>
@@ -478,7 +494,7 @@ const styles = StyleSheet.create({
     width:30,
     position:"absolute",
     marginTop: -50,
-    marginLeft:220
+    marginLeft:265
   },
   contenedorBotones2:{
     display:"flex",
@@ -583,6 +599,12 @@ const styles = StyleSheet.create({
     display:"flex",
     flexDirection:"column",
     gap:10,
+  },
+  tarjetaInfo2:{
+    display:"flex",
+    flexDirection:"column",
+    gap:10,
+    marginTop:10
   },
   tarjetaCabecera:{
     display:"flex",

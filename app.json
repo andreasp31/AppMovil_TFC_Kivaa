@@ -21,15 +21,15 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "expo": {
-      "android": {
-        "config": {
-          "googleMaps": {
-            "apiKey": "AIzaSyCZxKeONiM8AhPKrbGx50YpWaazxIfx4HI"
-          }
-        },
-        "package": "com.andreasp31.kivaa" 
+        "android": {
+          "config": {
+            "googleMaps": {
+              "apiKey": "AIzaSyCZxKeONiM8AhPKrbGx50YpWaazxIfx4HI"
+            }
+          },
+          "package": "com.andreasp31.kivaa"
+        }
       }
-  }
     },
     "web": {
       "output": "static",
@@ -48,7 +48,8 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

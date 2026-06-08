@@ -16,7 +16,7 @@ interface Local {
   latitud: number;   
   longitud: number;  
   descripcion?: string;
-  cualificacion?: number;
+  calificacion?: number;
   foto?: string;
   horario: string;
   enlace: string;
@@ -187,9 +187,9 @@ const manejarFavoritos = async (localId: string)=>{
           <View style={styles.tarjetaNota}>
             <View style={styles.contenedorNota}>
               <Image source={require('@/assets/images/star_filled.png')} style={styles.iconoEstrella}></Image>
-              <Text style={styles.tarjetatexto}>{local.cualificacion}</Text>
+              <Text style={styles.tarjetatexto}>{local.calificacion}</Text>
             </View>
-            <Text>Cualificación</Text>
+            <Text>Calificación</Text>
           </View> 
         </View>
 

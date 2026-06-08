@@ -1,9 +1,12 @@
 import { Image } from 'expo-image';
-import {StyleSheet, View, TouchableOpacity, Text, Modal, TextInput } from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text, Modal, TextInput, ScrollView } from 'react-native';
 import { useRouter, Stack, useFocusEffect} from 'expo-router';
 import React,{ useState, useEffect,useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Dropdown } from 'react-native-element-dropdown';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function PantallaAdmin() {
   //Para cambiar entre pantallas
@@ -14,13 +17,30 @@ export default function PantallaAdmin() {
   const [modalNuevoLocal, setModalNuevoLocal] = useState(false);
   const [modalCerrarSesion, setCerrarSesion] = useState(false);
   const [nombre, setNombre] = useState('');
-  const [tipoLocal, setTipoLocal] = useState('');
   const [direccionLocal, setDireccionLocal] = useState('');
   const [webLocal, setWebLocal] = useState('');
   const [latitudLocal, setLatitudLocal] = useState('');
   const [longitudLocal, setLongitudLocal] = useState('');
   const [horarioLocal, setHorarioLocal] = useState('');
-  const [fotoLocal, setFotoLocal] = useState('');
+  const [fotoLocal, setFotoLocal] = useState<string | null>(null);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null);
+  const [estaEnFoco, setEstaEnFoco] = useState(false);
+  const [campoActivo, setCampoActivo] = useState<string | null>(null);
+  const [textoApertura, setTextoApertura] = useState('08:00');
+  const [textoCierre, setTextoCierre] = useState('15:00');
+  //modales de los selectores de hora
+  const [mostrarHoraApertura, setMostrarHoraApertura] = useState(false);
+  const [mostrarHoraCierre, setMostrarHoraCierre] = useState(false);
+  const [horaApertura, setHoraApertura] = useState<Date>(new Date());
+  const [horaCierre, setHoraCierre] = useState<Date>(new Date());
+
+  const opciones = [
+    {label: "Restaurante", value: "Restaurante"},
+    {label: "Cafetería", value: "Cafetería"},
+    {label: "Panadería", value: "Panadería"},
+    {label: "Supermercado", value: "Supermercado"}
+  ];
+
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
 
   useEffect(()=>{
@@ -54,6 +74,97 @@ export default function PantallaAdmin() {
     nombreUsuario();
   }, [])
 )
+
+  const cambiarHoraApertura = (event: DateTimePickerEvent, date?: Date) => {
+    if(date){
+      const horas = date.getHours().toString().padStart(2,"0");
+      const minutos = date.getMinutes().toString().padStart(2,"0");
+      setTextoApertura(`${horas}:${minutos}`);
+    }
+    else if (event.type === 'dismissed') {
+      setMostrarHoraApertura(false);
+      setCampoActivo(null);
+    }
+  }
+
+  const cambiarHoraCierre = (event: DateTimePickerEvent, date?: Date) => {
+    if(date){
+      const horas = date.getHours().toString().padStart(2,"0");
+      const minutos = date.getMinutes().toString().padStart(2,"0");
+      setTextoCierre(`${horas}:${minutos}`);
+    }
+    else if (event.type === 'dismissed') {
+      setMostrarHoraCierre(false);
+      setCampoActivo(null);
+    }
+  }
+
+  const seleccionarImagen = async() => {
+    //solicitar permisos para acceder a la galería
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Necesitamos permisos de la galería para que esto funcione.');
+      return;
+    }
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      //solo fotos no videos
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!resultado.canceled) {
+      setFotoLocal(resultado.assets[0].uri);
+    }
+  }
+
+  const guardarLocal = async () =>{
+    if (!nombre || !tipoSeleccionado || !direccionLocal || !latitudLocal || !longitudLocal) {
+      alert("Todos los campos obligatorios.");
+      return;
+    }
+    const horario = `${textoApertura} - ${textoCierre}`;
+    const formData = new FormData();
+    formData.append("nombre", nombre.trim());
+    formData.append("tipo", tipoSeleccionado);
+    formData.append("direccion", direccionLocal.trim());
+    formData.append("web", webLocal.trim());
+    formData.append("latitud", latitudLocal);
+    formData.append("longitud", longitudLocal);
+    formData.append("horarios", horario);
+    if (fotoLocal) {
+      const nombreArchivo = fotoLocal.split('/').pop() || 'local_foto.jpg';
+      const matchExtension = /\.(\w+)$/.exec(nombreArchivo);
+      const tipoArchivo = matchExtension ? `image/${matchExtension[1]}` : `image/jpeg`;
+
+      formData.append('foto', {
+        uri: fotoLocal,
+        name: nombreArchivo,
+        type: tipoArchivo,
+      } as any);
+    }
+    try{
+      const respuesta = await axios.post("http://10.0.2.2:3000/api/locales/crear", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      alert("¡Local creado con éxito!");
+      setModalNuevoLocal(false);
+      setNombre('');
+      setTipoSeleccionado(null);
+      setDireccionLocal('');
+      setWebLocal('');
+      setLatitudLocal('');
+      setLongitudLocal('');
+      setFotoLocal(null);
+      setTextoApertura('08:00');
+      setTextoCierre('15:00');
+    }
+    catch(error){
+      console.error("Error al guardar el local", error);
+    }
+  }
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -129,59 +240,106 @@ export default function PantallaAdmin() {
       animationType="fade"
       transparent={true}>
         <View style={styles.modalFondo}>
-          <View style={styles.modalBloque}>
+          <View style={styles.modalBloque2}>
             <Text style={styles.datosInfo}>Nuevo Local</Text>
-            <View style={styles.subContenedor}>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Nombre</Text>
-                <TextInput style={styles.input1} placeholder='Nombre' value={nombre} onChangeText={setNombre}></TextInput>
+            <ScrollView nestedScrollEnabled={true} 
+            showsVerticalScrollIndicator={false} 
+            style={styles.contenedorInput}>
+              <View style={styles.subContenedor}>
+                <View style={[styles.subContenedor0, estaEnFoco && { borderColor: '#FAD934' }]}>
+                  <Text style={styles.texto}>Nombre</Text>
+                  <TextInput style={styles.input1} placeholder='Nombre' value={nombre} onChangeText={setNombre}></TextInput>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Tipo</Text>
+                  <Dropdown
+                      style={[styles.dropdown, estaEnFoco && { borderColor: '#FAD934' }]}
+                      placeholderStyle={styles.placeholderStyle}
+                      selectedTextStyle={styles.selectedTextStyle}
+                      containerStyle={styles.listaDesplegable}
+                      data={opciones}
+                      maxHeight={200}
+                      labelField="label"
+                      valueField="value"
+                      placeholder={!estaEnFoco ? 'Selecciona una opción...' : '...'}
+                      value={tipoSeleccionado}
+                      onFocus={() => setEstaEnFoco(true)}
+                      onBlur={() => setEstaEnFoco(false)}
+                      onChange={item => {
+                        setTipoSeleccionado(item.value);
+                        setEstaEnFoco(false);
+                      }}
+                    />
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Dirección</Text>
+                  <TextInput style={styles.input1} placeholder='Introduce la dirección...' value={direccionLocal} onChangeText={setDireccionLocal}></TextInput>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Página Web</Text>
+                  <TextInput style={styles.input1} placeholder='Introduce la web' value={webLocal} onChangeText={setWebLocal}></TextInput>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Latitud</Text>
+                  <TextInput style={styles.input1} placeholder='Introduce la latitud...' value={latitudLocal} onChangeText={setLatitudLocal}></TextInput>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Longitud</Text>
+                  <TextInput style={styles.input1} placeholder='Introduce la longitud' value={longitudLocal} onChangeText={setLongitudLocal}></TextInput>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Horario</Text>
+                  <View style={styles.subContenedor1}>
+                      <TouchableOpacity style={styles.input2} onPress={()=>{
+                        setMostrarHoraApertura(true);}}>
+                        <Text style={styles.textoCentro}>{textoApertura}</Text>
+                      </TouchableOpacity>
+                      <Text>-</Text>
+                      <TouchableOpacity style={styles.input2} onPress={()=>{
+                        setMostrarHoraCierre(true);}}>
+                        <Text style={styles.textoCentro}>{textoCierre}</Text>
+                      </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.subContenedor0}>
+                  <Text style={styles.texto}>Foto</Text>
+                  <TouchableOpacity style={styles.contenedorFoto} onPress={seleccionarImagen}>
+                    {fotoLocal ? (
+                      // Si hay foto, la pintamos ocupando todo el recuadro
+                      <View style={styles.marcadorTexto}>
+                        <Image source={{ uri: fotoLocal }} style={styles.vistaFotos}/>
+                        <Text style={styles.textoSub}>Pulsa para cambiar la imagen</Text>
+                      </View>
+                      
+                    ) : (
+                      // Si no hay foto, mostramos un diseño limpio de marcador de posición
+                      <View style={styles.marcadorTexto}>
+                        <Image style={styles.icono2}  source={require('@/assets/images/Camera.png')}></Image>
+                        <Text style={styles.textoSub}>Pulsa para añadir una imagen</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Tipo</Text>
-                <TextInput style={styles.input1} placeholder='Tipo de local' value={tipoLocal} onChangeText={setTipoLocal}></TextInput>
-              </View>
-            </View>
-            <View style={styles.subContenedor}>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Dirección</Text>
-                <TextInput style={styles.input1} placeholder='Introduce la dirección...' value={direccionLocal} onChangeText={setDireccionLocal}></TextInput>
-              </View>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Página Web</Text>
-                <TextInput style={styles.input1} placeholder='Introduce la web' value={webLocal} onChangeText={setWebLocal}></TextInput>
-              </View>
-            </View>
-            <View style={styles.subContenedor}>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Latitud</Text>
-                <TextInput style={styles.input1} placeholder='Introduce la latitud...' value={latitudLocal} onChangeText={setLatitudLocal}></TextInput>
-              </View>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Longitud</Text>
-                <TextInput style={styles.input1} placeholder='Introduce la longitud' value={longitudLocal} onChangeText={setLongitudLocal}></TextInput>
-              </View>
-            </View>
-            <View style={styles.subContenedor}>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Horario</Text>
-                <TextInput style={styles.input1} placeholder='Introduce el horario...' value={horarioLocal} onChangeText={setHorarioLocal}></TextInput>
-              </View>
-              <View style={styles.subContenedor0}>
-                <Text style={styles.texto}>Foto</Text>
-                <TextInput style={styles.input1} placeholder='Selecciona una foto' value={fotoLocal} onChangeText={setFotoLocal}></TextInput>
-              </View>
-            </View>
+            </ScrollView>
+            
             <View style = {styles.contenedorBotones2}>
-              <TouchableOpacity style = {styles.Boton1} onPress={() => setCerrarSesion(false)}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setModalNuevoLocal(false)}>
                 <Text>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
+              <TouchableOpacity style = {styles.Boton2} onPress={guardarLocal}>
                 <Text>Guardar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+      {mostrarHoraApertura && (
+        <DateTimePicker  style={styles.modalSelector} value={horaApertura} mode="time" display="spinner" is24Hour={true} onChange={cambiarHoraApertura}></DateTimePicker>
+      )}
+      {mostrarHoraCierre && (
+        <DateTimePicker value={horaCierre} mode="time" display="spinner" is24Hour={true} onChange={cambiarHoraCierre}></DateTimePicker>
+      )}
     </View>  
     
   );
@@ -199,11 +357,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop:10
   },
+  contenedorFoto:{
+
+  },
+  vistaFotos:{
+    height:30,
+    width:100,
+    paddingBottom:50
+  },
+  textoSub:{
+    fontSize:14
+  },
+  marcadorTexto:{
+    display:"flex",
+    flexDirection:"row",
+    alignContent:"center",
+    justifyContent:"center",
+    alignItems:"center",
+    gap:10,
+    paddingBottom:50
+  },
+  modalSelector:{
+    borderWidth:10,
+    borderRadius:10
+  },
+  textoCentro:{
+    alignSelf:"center"
+  },
+  dropdown: {
+    height: 50,
+    borderColor: "#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    width: 300,
+    backgroundColor: "white",
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: "#9C9696",
+  },
+  subContenedor1:{
+    display:"flex",
+    flexDirection:"row",
+    gap:8,
+    alignItems:"center"
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: "#110501",
+  },
+  listaDesplegable: {
+    borderRadius: 15,
+    marginTop: 5,
+    borderWidth: 0.5,
+    borderColor: "#110501",
+    backgroundColor: "white",
+  },
   fondoInfo:{
     backgroundColor:"#FAD934",
     width:400,
     height:60,
     marginTop:-50
+  },
+  picker:{
+    fontSize:10
+  },
+  contenedorPicker:{
+    borderColor:"#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    width:300,
+    height:45,
+    paddingLeft:15,
+    paddingBottom:5
+  },
+  input1:{
+    borderColor:"#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    width:300,
+    height:45,
+    paddingLeft:15,
+  },
+  input2:{
+    borderColor:"#110501",
+    borderWidth: 0.5,
+    borderRadius: 15,
+    width:140,
+    height:45,
+    display:"flex",
+    textAlign:"center",
+    justifyContent:"center",
+    alignContent:"center"
+  },
+  contenedorInput:{
+    width:320,
+    marginTop:15,
+    maxHeight: 380, 
+    alignSelf: "center",
+    paddingLeft:10,
+    paddingVertical:10
   },
   texto:{
     fontSize:15
@@ -237,6 +491,14 @@ const styles = StyleSheet.create({
     padding:40,
     borderRadius:20,
     gap:10
+  },
+  modalBloque2:{
+    backgroundColor:"#FFFFFF",
+    paddingHorizontal:20,
+    paddingVertical:30,
+    borderRadius:20,
+    gap:10,
+    alignItems:"center",
   },
   contenedorBotones2:{
     display:"flex",
@@ -303,14 +565,6 @@ const styles = StyleSheet.create({
     fontSize:20,
     fontWeight:700
   },
-  input1:{
-    borderColor:"#110501",
-    borderWidth: 1,
-    borderRadius: 20,
-    width:140,
-    height:50,
-    paddingLeft:15,
-  },
   contenedorIconos:{
     display:"flex",
     flexDirection:"column",
@@ -319,7 +573,7 @@ const styles = StyleSheet.create({
   },
   subContenedor:{
     display:"flex",
-    flexDirection:"row",
+    flexDirection:"column",
     gap:15
   },
   subContenedor0:{
@@ -367,6 +621,10 @@ const styles = StyleSheet.create({
     height:50,
     width:50
   },
+  icono2:{
+    height:20,
+    width:20
+  },
   foto: {
     marginLeft:-40,
     width: 150,
@@ -391,6 +649,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 25,
     alignSelf:"flex-start",
-    marginLeft:35
   }
 });

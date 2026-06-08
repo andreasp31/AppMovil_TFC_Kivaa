@@ -52,7 +52,7 @@ export default function PantallaAdminResena() {
   const tarjeta = ({ item }:{item : Local}) => {
       console.log("Datos de la tarjeta:", item);
       return(
-        <TouchableOpacity style={styles.tarjeta} onPress={() => router.push({pathname:"/PantallaAdLocal", params:{id: item._id}})}>
+        <TouchableOpacity style={styles.tarjeta}>
           <Image source={{ uri: item.foto }} style={styles.fotoTarjeta}/>
           <View style={styles.tarjetaContenedor}>
             <View style={styles.contenedorSuperior}>
