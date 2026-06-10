@@ -26,6 +26,7 @@ export default function HomeScreen() {
   const [alertaFav, setAlertaFav] = useState(false);
   const [sugeridos, setSugeridos] = useState<Local[]>([]);
   const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [fotoUsuario, setFotoUsuario] = useState<string | null>(null);
   
   useFocusEffect(
     useCallback(() => {
@@ -33,14 +34,25 @@ export default function HomeScreen() {
         try {
           const nombre = await AsyncStorage.getItem("nombreUsuario");
           const usuarioId = await AsyncStorage.getItem("idUsuario");
+          const fotoGuardada = await AsyncStorage.getItem("fotoUsuario");
+          const token = await AsyncStorage.getItem("token");
           if (nombre) {
             setNombreUsuario(nombre);
           }
-          if (usuarioId) {
-            const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
+          if (token) {
+            const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos`,{
+              headers:{
+                Authorization: `Bearer ${token}`
+              }
+            });
             setFavoritos(resultado.data);
             const resultadosLocales = await axios.get("http://10.0.2.2:3000/api/locales");
             setSugeridos(resultadosLocales.data);
+          }
+          if (fotoGuardada) {
+            setFotoUsuario(fotoGuardada);
+          } else {
+            setFotoUsuario(null);
           }
         } catch (error) {
           console.error("Error al cargar los datos", error);
@@ -52,14 +64,17 @@ export default function HomeScreen() {
   
   const manejarFavoritos = async (localId: string) => {
     try {
-      const usuarioId = await AsyncStorage.getItem("idUsuario");
+      const token = await AsyncStorage.getItem("token");
       console.log("ID del Local enviado:", localId);
-      console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
-      const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito", {
-        localId,
-        usuarioId
-      });
-
+      console.log("ID del Usuario recuperado de AsyncStorage:", token);
+      const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",
+        {localId},
+        {
+          headers:{
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
       // Lógica dinámica para actualizar estados visuales inmediatamente
       const yaEsFavorito = favoritos.some(local => local._id === localId);
       if (yaEsFavorito) {
@@ -93,7 +108,7 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto} />
         <View style={styles.contenedorCuenta}>
-          <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono} />
+          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoCuenta.png')} style={styles.icono} />
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>
@@ -334,6 +349,7 @@ const styles = StyleSheet.create({
   },
   contenedorCuenta: {
     flexDirection: "column",
+    alignItems:"center",
     gap: 5
   },
   contenedorSuperior: {

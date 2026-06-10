@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import {StyleSheet, View, TouchableOpacity, Text, TextInput } from 'react-native';
+import {StyleSheet, View, TouchableOpacity, Text, TextInput, Modal } from 'react-native';
 import { useRouter, Stack} from 'expo-router';
 import React, { useState } from 'react';
 import axios from 'axios';
@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const [nombre, ponerNombre] = useState('');
   const [apellidos, ponerApellidos] = useState('');
   const [errorMensaje, ponerMensaje] = useState('');
+  const [alertaCrear, setAlertaCrear] = useState(false);
   //Para cambiar entre pantallas
   const router = useRouter();
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
@@ -26,8 +27,11 @@ export default function HomeScreen() {
           clave: clave,
           clave2: confirmarClave
         });
-        router.push('/PantallaInicio');
-
+        setAlertaCrear(true);
+        setTimeout(() => {
+          setAlertaCrear(false);
+          router.replace("/PantallaInicio");
+        }, 2000);
       }
       catch (error: any) {
         let mensajeFinal = "Error al registrar";
@@ -95,6 +99,17 @@ export default function HomeScreen() {
           <Text>Inicia Sesión con Google</Text>
         </TouchableOpacity>
       </View>
+      <Modal visible={alertaCrear}
+        onRequestClose={() => setAlertaCrear(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/newAcc.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>Tu cuenta se ha creado correctamente.</Text>
+          </View>
+        </View>
+      </Modal>
     </View>  
   );
 }
@@ -109,6 +124,40 @@ const styles = StyleSheet.create({
   textoEnlace:{
     fontWeight:"bold",
     color:"#D8B610"
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:500,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
+  },
+  textoNotificacion:{
+    fontSize:16
   },
   contenedor1:{
     display:"flex",

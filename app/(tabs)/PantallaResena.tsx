@@ -31,6 +31,7 @@ export default function PantallaResena() {
   const [alertaActualizar, setAlertaActualizar] = useState(false);
   const [alertaBorrar, setAlertaBorrar] = useState(false);
   const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [fotoUsuario, setFotoUsuario] = useState<string | null>(null);
 
   useFocusEffect(
   useCallback(()=>{
@@ -38,13 +39,25 @@ export default function PantallaResena() {
       try {
         const nombre = await AsyncStorage.getItem("nombreUsuario");
         const usuarioId = await AsyncStorage.getItem("idUsuario");
+        const fotoGuardada = await AsyncStorage.getItem("fotoUsuario");
+        const token = await AsyncStorage.getItem("token");
         if(nombre){
           setNombreUsuario(nombre);
         }
-        if(usuarioId){
+        if(token){
           setIdUsuario(usuarioId)
-          const resultado = await axios.get(`http://10.0.2.2:3000/api/${usuarioId}/resenas`);
+          const resultado = await axios.get(`http://10.0.2.2:3000/api/misResenas`,{
+            headers:{
+              Authorization: `Bearer ${token}`
+            }
+          });
           setComentarios(resultado.data);
+        }
+        if (fotoGuardada) {
+            setFotoUsuario(fotoGuardada);
+          } 
+        else {
+          setFotoUsuario(null);
         }
       }
       catch(error){
@@ -67,13 +80,18 @@ const actualizarResena = async() => {
     return;
   }
   try{
+    const token = await AsyncStorage.getItem("token");
     const nuevaResena = {
       comentario: opinion,
       estrellas: notaestrellas,
       fecha: new Date().toISOString() 
     };
     console.log(nuevaResena)
-    const respuesta = await axios.put(`http://10.0.2.2:3000/api/resenas/actualizar/${reseñaSeleccionada._id}`, nuevaResena);
+    const respuesta = await axios.put(`http://10.0.2.2:3000/api/resenas/actualizar/${reseñaSeleccionada._id}`, nuevaResena, {
+      headers:{
+        Authorization: `Bearer ${token}`
+      }
+    });
     if (respuesta.status === 200 || respuesta.status === 201) {
       const comentariosActualizados = comentarios.map((item) => {
         if (item._id === reseñaSeleccionada._id) {
@@ -156,7 +174,7 @@ function notaEstrellas(nota : number){
       <TouchableOpacity style= {styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
-          <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
+          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>
@@ -270,8 +288,8 @@ function notaEstrellas(nota : number){
         animationType="fade"
         transparent={true}>
         <View style={styles.modalFondo}>
-          <View style={styles.modalBloque}>
-            <Text style={styles.textoBold}>Reseña a {reseñaSeleccionada ? reseñaSeleccionada.localId?.nombre : "Editar Reseña"}</Text>
+          <View style={styles.modalBloque3}>
+            <Text style={styles.textoBold2}>Reseña a {reseñaSeleccionada ? reseñaSeleccionada.localId?.nombre : "Editar Reseña"}</Text>
             <Text style={styles.textoDescripcion4}>¿Seguro que quieres borrar esta reseña?</Text>
               <View style = {styles.contenedorBotones2}>
                 <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible2(false)}>
@@ -432,11 +450,23 @@ const styles = StyleSheet.create({
     display:"flex",
     alignItems:"center"
   },
+  modalBloque3:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10,
+    width:350,
+    display:"flex",
+    flexDirection:"column",
+    alignItems:"center",
+    alignContent:"center",
+    justifyContent:"center"
+  },
   contenedorBotones2:{
     display:"flex",
     flexDirection:"row",
     marginTop:20,
-    gap:35
+    gap:20
   },
   Boton1:{
     borderWidth:1,
@@ -482,6 +512,7 @@ const styles = StyleSheet.create({
   contenedorCuenta:{
     display:"flex",
     flexDirection:"column",
+    alignItems:"center",
     gap:5
   },
   contenedorIconos:{
@@ -541,7 +572,11 @@ const styles = StyleSheet.create({
   },
   textoBold:{
     fontWeight: 'bold',
-    fontSize:18
+    fontSize:18,
+  },
+  textoBold2:{
+    fontWeight: 'bold',
+    fontSize:18,
   },
   containerFotos:{
     display: "flex",

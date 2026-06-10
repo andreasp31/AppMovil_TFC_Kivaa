@@ -27,6 +27,7 @@ export default function PantallaPrincipal() {
   const [resultados, setResultados] = useState([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
+  const [fotoUsuario, setFotoUsuario] = useState<string | null>(null);
   const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
   const [mostrarLista, setMostrarLista] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(true);
@@ -77,13 +78,24 @@ useFocusEffect(
       try {
         const nombre = await AsyncStorage.getItem("nombreUsuario");
         const usuarioId = await AsyncStorage.getItem("idUsuario");
+        const fotoGuardada = await AsyncStorage.getItem("fotoUsuario");
+        const token = await AsyncStorage.getItem("token");
         if(nombre){
           setNombreUsuario(nombre);
         }
-        if(usuarioId){
-          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
+        if(token){
+          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos`,{
+            headers:{
+              Authorization: `Bearer ${token}`
+            }
+          });
           const idsFavoritos = resultado.data.map((fav: any) => fav._id);
           setFavoritos(idsFavoritos);
+        }
+        if (fotoGuardada) {
+          setFotoUsuario(fotoGuardada);
+        } else {
+          setFotoUsuario(null);
         }
       }
       catch(error){
@@ -229,12 +241,18 @@ useFocusEffect(
 //gestionar favoritos
 const manejarFavoritos = async (localId: string)=>{
   try{
-    const usuarioId = await AsyncStorage.getItem("idUsuario");
-    console.log("ID del Local enviado:", localId);
-    console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      console.log("No hay un token válido guardado.");
+      return;
+    }
     const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",{
       localId,
-      usuarioId
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
     if (favoritos.includes(localId)) {
       setFavoritos(favoritos.filter(id => id !== localId));
@@ -256,7 +274,6 @@ const manejarFavoritos = async (localId: string)=>{
     }, 2500);
   }
 }
-
 
   const tarjeta = ({ item }:{item : Local}) => {
     console.log("Datos de la tarjeta:", item);
@@ -295,14 +312,14 @@ const manejarFavoritos = async (localId: string)=>{
       <TouchableOpacity style= {styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
-          <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
+          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>
       <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={false} style={styles.contenedorGeneral}>
         <View style={styles.textos}>
           <Text style={styles.textoDescripcion2}>Restaurantes, supermercados y bares,</Text>
-          <Text style={styles.titulos}>Encuentra en 1 minuto!</Text>
+          <Text style={styles.titulos}>Encuéntralos en 1 minuto!</Text>
         </View>
         <View style={styles.bloqueBotones}>
           <View style={styles.contenedorBusqueda}>
@@ -656,6 +673,7 @@ const styles = StyleSheet.create({
   },
   contenedorGeneral:{
     margin:3,
+    maxHeight:620
   },
   cajaScroll2:{
     marginLeft:10,
@@ -748,6 +766,7 @@ const styles = StyleSheet.create({
   contenedorCuenta:{
     display:"flex",
     flexDirection:"column",
+    alignItems:"center",
     gap:5
   },
   contenedorIconos:{

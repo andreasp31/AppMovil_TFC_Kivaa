@@ -45,6 +45,7 @@ export default function PantallaPrincipal() {
   const estrellas = [1,2,3,4,5];
   const [idUsuario, setIdUsuario] = useState<String | null>(null);
   const [alertaActualizar, setAlertaActualizar] = useState(false);
+  const [fotoUsuario, setFotoUsuario] = useState<string | null>(null);
   
   useEffect(() =>{
     const detallesLocal = async () => {
@@ -69,17 +70,24 @@ export default function PantallaPrincipal() {
         try {
           const nombre = await AsyncStorage.getItem("nombreUsuario");
           const usuarioId = await AsyncStorage.getItem("idUsuario");
+          const fotoGuardada = await AsyncStorage.getItem("fotoUsuario");
+          const token = await AsyncStorage.getItem("token");
           if(nombre){
             setNombreUsuario(nombre);
           }
           if (usuarioId) {
           setIdUsuario(usuarioId);
-          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
+          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos`,{
+            headers:{
+              Authorization: `Bearer ${token}`
+            }
+          });
           const idsFavoritos = resultado.data.map(
             (local: Local) => local._id
           );
           setFavoritos(idsFavoritos);
         }
+        if (fotoGuardada) {setFotoUsuario(fotoGuardada)}
 
         }
         catch(error){
@@ -101,13 +109,14 @@ export default function PantallaPrincipal() {
   //gestionar favoritos
 const manejarFavoritos = async (localId: string)=>{
   try{
+    const token = await AsyncStorage.getItem("token");
     const usuarioId = await AsyncStorage.getItem("idUsuario");
-    console.log("ID del Local enviado:", localId);
-    console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
     const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",{
-      localId,
-      usuarioId
-    });
+      localId}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
     if (favoritos.includes(localId)) {
       setFavoritos(favoritos.filter(id => id !== localId));
     } else {
@@ -136,6 +145,7 @@ const guardarResena = async() => {
     return;
   }
   try{
+    const token = await AsyncStorage.getItem("token");
     const nuevaResena = {
       localId : id,
       usuarioId: idUsuario,
@@ -145,7 +155,11 @@ const guardarResena = async() => {
       fecha: new Date().toISOString() 
     };
     console.log(nuevaResena)
-    const respuesta = await axios.post(`http://10.0.2.2:3000/api/locales/resena`, nuevaResena);
+    const respuesta = await axios.post(`http://10.0.2.2:3000/api/locales/resena`, nuevaResena,{
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     if (respuesta.status === 200 || respuesta.status === 201) {
       setComentarios([respuesta.data, ...comentarios]);
       setModalVisible(false);
@@ -191,7 +205,7 @@ const guardarResena = async() => {
       <TouchableOpacity style={styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
-          <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
+          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoPerfil.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>

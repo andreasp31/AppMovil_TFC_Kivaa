@@ -31,6 +31,11 @@ export default function HomeScreen() {
         await AsyncStorage.setItem("roleUsuario", usuario.role);
         await AsyncStorage.setItem("emailUsuario", usuario.email);
         await AsyncStorage.setItem("claveUsuario",usuario.clave);
+        if (usuario.fotoPerfil) {
+          await AsyncStorage.setItem("fotoUsuario", usuario.fotoPerfil);
+        } else {
+          await AsyncStorage.setItem("fotoUsuario", ""); 
+        }
         if(usuario.role === "admin"){
           router.push('/PantallaAdmin');
         }
@@ -40,6 +45,7 @@ export default function HomeScreen() {
       }
       //El any es para decirle a typescript que se lo que estoy haciendo al llamar error, que sino me da problemas
       catch(error : any){
+        console.error("Error detallado del login:", error);
         let mensajeFinal = "Error al iniciar sesión";
         if (error.response && error.response.data) {
           const data = error.response.data
@@ -90,7 +96,13 @@ export default function HomeScreen() {
         {errorMensaje ? <Text style={styles.mensajeError}>{errorMensaje}</Text> : null}
         <Text style={styles.texto}>Olvidaste tu contraseña?</Text>
         <KivaaBoton titulo="Iniciar Sesión" onPress={login}></KivaaBoton>
-        <Text style={styles.texto}>Si no tienes cuenta, <Text style={styles.textoEnlace}>regístrate </Text></Text>
+        <View style={styles.contenedorTexto}>
+          <Text style={styles.texto}>Si no tienes cuenta,</Text>
+          <TouchableOpacity onPress={() => router.push("/PantallaRegistro")}>
+            <Text style={styles.textoEnlace}>regístrate</Text> 
+          </TouchableOpacity>
+        </View>
+        
         <Image source={require('@/assets/images/separacion.png')} style={styles.icono3}></Image>
         <TouchableOpacity style={styles.botonGoogle}>
           <Image source={require('@/assets/images/logoGoogle.png')} style={styles.icono2}></Image>
@@ -107,6 +119,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
   },
+  contenedorTexto:{
+    display:"flex",
+    flexDirection:"row",
+    justifyContent:"center",
+    alignItems:"center",
+    gap:5
+  },
   contenedor1:{
     display:"flex",
     flexDirection:"column",
@@ -118,7 +137,7 @@ const styles = StyleSheet.create({
   },
   textoEnlace:{
     fontWeight:"bold",
-    color:"#D8B610"
+    color:"#D8B610",
   },
   textoTitulo:{
     fontSize:25,

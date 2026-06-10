@@ -65,7 +65,7 @@ export default function TabLayout() {
                   height: focused ? 20 : 30, 
                 }} 
               />
-              {focused && <Text style={styles.textoActivado}>Home</Text>}
+              {focused && <Text style={styles.textoActivado}>Inicio</Text>}
             </View>
           ),
         }}
