@@ -17,7 +17,7 @@ interface Local {
   foto?: string;
 }
 
-export default function PantallaAdminResena() {
+export default function PantallaAdminBorrar() {
   //Para cambiar entre pantallas
   const router = useRouter();
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
@@ -25,6 +25,10 @@ export default function PantallaAdminResena() {
   const [resultados, setResultados] = useState([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [localesBusqueda, setLocalesBusqueda] = useState<Local[]>([]);
+  const [localSeleccionada, setLocalSeleccionada] = useState<Local | null>(null);
+  const [modalVisible2, setModalVisible2] = useState(false);
+  const [alertaBorrar, setAlertaBorrar] = useState(false);
+  const [alertaMensaje, setAlertaMensaje] = useState('');
   const [modalCerrarSesion, setCerrarSesion] = useState(false);
   //lo que se va a mostrar en pantalla: uso botones, imágenes y text
 
@@ -74,10 +78,40 @@ const manejarBusqueda = (texto: string) => {
     setLocalesBusqueda(filtrados);
   };
 
+  const borrarLocal = async() => {
+    if (!localSeleccionada) {
+      setAlertaMensaje("No se ha seleccionado ningún local.");
+      setAlertaBorrar(true);
+      return;
+    }
+    try{
+      const respuesta = await axios.delete(`http://10.0.2.2:3000/api/local/eliminar/${localSeleccionada._id}`);
+      if (respuesta.status === 200) {
+        const localesFiltrados = locales.filter(item => item._id !== localSeleccionada._id);
+        setLocales(localesFiltrados);
+        setLocalesBusqueda(localesFiltrados.filter(local => 
+          local.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+          local.tipo.toLowerCase().includes(busqueda.toLowerCase())
+        ));
+        setModalVisible2(false);
+        setLocalSeleccionada(null);
+
+        setAlertaMensaje("Se ha borrado correctamente el local.");
+        setAlertaBorrar(true);
+        setTimeout(() => {
+          setAlertaBorrar(false);
+        }, 1500);
+      }
+    }
+    catch(error){
+      console.error("Error al borrar el local: ", error);
+    }
+  }
+  
   const tarjeta = ({ item }: { item: Local }) => {
       console.log("Datos de la tarjeta:", item);
       return(
-        <TouchableOpacity style={styles.tarjeta} onPress={() => router.push({pathname:"/PantallaAdLocal", params:{id: item._id}})}>
+        <TouchableOpacity style={styles.tarjeta}>
           <Image source={{ uri: item.foto }} style={styles.fotoTarjeta}/>
           <View style={styles.tarjetaContenedor}>
             <View style={styles.contenedorSuperior}>
@@ -85,6 +119,10 @@ const manejarBusqueda = (texto: string) => {
                 <Image source={require('@/assets/images/star_filled.png')} style={styles.iconoEstrella}></Image>
                 <Text style={styles.tarjetatexto}>{item.calificacion}</Text>
               </View>
+              <TouchableOpacity style={styles.contenedorIcono} onPress={()=>{setLocalSeleccionada(item);   
+                setModalVisible2(true)}}>
+                <Image source={require('@/assets/images/delete.png')} style={styles.iconoEditar}></Image>
+              </TouchableOpacity>
             </View>
             <View style={styles.tarjetaInfo}>
               <Text style={styles.tarjetaTitulo}>{item.nombre}</Text>
@@ -148,6 +186,36 @@ const manejarBusqueda = (texto: string) => {
         style={styles.listaContenedor}
         contentContainerStyle={styles.listaContenidoInterno}
       />
+      <Modal visible={modalVisible2}
+        onRequestClose={() => setModalVisible2(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque3}>
+            <Text style={styles.textoBold2}>{ localSeleccionada ? localSeleccionada.nombre: "Borrar Local"}</Text>
+            <Text style={styles.textoDescripcion4}>¿Seguro que quieres borrar este local?</Text>
+            <View style = {styles.contenedorBotones3}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible2(false)}>
+                <Text>No, cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => borrarLocal()}>
+                <Text>Sí, borrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={alertaBorrar}
+        onRequestClose={() => setAlertaBorrar(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/alertBorrar.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={modalCerrarSesion}
         onRequestClose={() => setCerrarSesion(false)}
         animationType="fade"
@@ -159,14 +227,14 @@ const manejarBusqueda = (texto: string) => {
             <View style = {styles.contenedorBotones2}>
               <TouchableOpacity style = {styles.Boton1} onPress={() => setCerrarSesion(false)}>
                 <Text>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
-              <Text>Salir</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
+                <Text>Salir</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
     </View>  
   );
 }
@@ -183,11 +251,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop:10
   },
+  contenedorIcono:{
+    alignSelf:"flex-end"
+  },
+  apartadosTarjeta:{
+    display:"flex",
+    flexDirection:"row",
+    gap:5
+  },
+  iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
+  textoNotificacion:{
+    fontSize:16
+  },
+  modalBloque2:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:580,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
+  },
+  modalBloque:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10
+  },
   contenedorBotones2:{
     display:"flex",
     flexDirection:"row",
     marginTop:20,
     gap:55
+  },
+  contenedorBotones3:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:20
   },
   Boton1:{
     borderWidth:1,
@@ -201,30 +323,33 @@ const styles = StyleSheet.create({
     borderRadius:30,
     backgroundColor:"#FAD934"
   },
-  modalFondo:{
-    backgroundColor:"rgba(0,0,0,0.5)",
-    display:"flex",
-    flexDirection:"column",
-    justifyContent:"center",
-    alignItems:"center",
-    height:750,
-  },
-  modalBloque:{
-    backgroundColor:"#FFFFFF",
-    padding:40,
-    borderRadius:20,
-    gap:10
-  },
-  apartadosTarjeta:{
-    display:"flex",
-    flexDirection:"row",
-    gap:5
-  },
   listaContenedor: {
     flex: 1,
     width: "100%",
     marginTop:20,
     marginBottom:50
+  },
+  textoDescripcion4: { 
+    color:"#110501",    
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign:"center"    
+  },
+  textoBold2:{
+    fontWeight: 'bold',
+    fontSize:18,
+  },
+  modalBloque3:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10,
+    width:350,
+    display:"flex",
+    flexDirection:"column",
+    alignItems:"center",
+    alignContent:"center",
+    justifyContent:"center"
   },
   listaContenidoInterno: {
     paddingBottom: 30
@@ -237,6 +362,14 @@ const styles = StyleSheet.create({
     height:35,
     width:35,
     marginRight:300
+  },
+  modalFondo:{
+    backgroundColor:"rgba(0,0,0,0.5)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
   },
   contenedorSuperior:{
     display:"flex",
@@ -255,6 +388,10 @@ const styles = StyleSheet.create({
   iconoEstrella:{
     height:15,
     width:15
+  },
+  iconoEditar:{
+    height:25,
+    width:25
   },
   iconoFav:{
     height:30,

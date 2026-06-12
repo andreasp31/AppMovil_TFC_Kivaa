@@ -325,7 +325,7 @@ const manejarFavoritos = async (localId: string)=>{
           <View style={styles.contenedorBusqueda}>
             <TouchableOpacity>
               <View style={styles.buscadorContainer}>
-                <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={(texto) => setBusqueda(texto)} onSubmitEditing={() => manejarBusqueda(busqueda)} returnKeyType='search'></TextInput>
+                <TextInput style={styles.textoBuscador} placeholder='Busca locales sin gluten cerca...' value={busqueda} onChangeText={manejarBusqueda} onSubmitEditing={() => manejarBusqueda(busqueda)} returnKeyType='search'></TextInput>
                 <TouchableOpacity onPress={() => manejarBusqueda(busqueda)}>
                   <Image source={require('@/assets/images/Search.png')} style={styles.icono3}></Image>
                 </TouchableOpacity>

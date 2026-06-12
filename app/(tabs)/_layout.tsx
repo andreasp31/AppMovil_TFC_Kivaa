@@ -148,6 +148,20 @@ export default function TabLayout() {
           tabBarItemStyle: { display: 'none' },
         }}
       />
+      <Tabs.Screen
+        name="PantallaAdBorrar"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="PantallaAdEdit"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
     </Tabs>
   );
 }

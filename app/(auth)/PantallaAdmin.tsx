@@ -33,6 +33,7 @@ export default function PantallaAdmin() {
   const [mostrarHoraCierre, setMostrarHoraCierre] = useState(false);
   const [horaApertura, setHoraApertura] = useState<Date>(new Date());
   const [horaCierre, setHoraCierre] = useState<Date>(new Date());
+  const [alertaActualizar, setAlertaActualizar] = useState(false);
 
   const opciones = [
     {label: "Restaurante", value: "Restaurante"},
@@ -149,7 +150,8 @@ export default function PantallaAdmin() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      alert("¡Local creado con éxito!");
+      setAlertaActualizar(true);
+      setNumeroLocales(prev => prev + 1);
       setModalNuevoLocal(false);
       setNombre('');
       setTipoSeleccionado(null);
@@ -160,6 +162,10 @@ export default function PantallaAdmin() {
       setFotoLocal(null);
       setTextoApertura('08:00');
       setTextoCierre('15:00');
+      setAlertaActualizar(true);
+        setTimeout(() => {
+        setAlertaActualizar(false);
+      }, 1500);
     }
     catch(error){
       console.error("Error al guardar el local", error);
@@ -185,7 +191,7 @@ export default function PantallaAdmin() {
           <Text style={styles.textoDescripcion}>Total de Usuarios</Text>
         </View>
       </View>
-      <Text style={styles.textoNombreApartado}>Menu</Text>
+      <Text style={styles.textoBold}>Menu</Text>
       <View style={styles.contenedorGeneral}>
         <TouchableOpacity  style={styles.contenedorInfo2} onPress={() => setModalNuevoLocal(true)}>
           <Image source={require('@/assets/images/nuevoLocal.png')} style={styles.iconos}></Image>
@@ -194,14 +200,14 @@ export default function PantallaAdmin() {
             <Text>Crear un nuevo establecimiento</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.contenedorInfo2}>
+        <TouchableOpacity style={styles.contenedorInfo2} onPress={() => router.push("/PantallaAdEdit")}>
           <Image source={require('@/assets/images/editarLocal.png')} style={styles.iconos}></Image>
           <View style={styles.contenedorTexto}>
             <Text style={styles.datosInfo}>Editar Local</Text>
             <Text>Modificar cualquier información</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.contenedorInfo2}>
+        <TouchableOpacity style={styles.contenedorInfo2} onPress={() => router.push("/PantallaAdBorrar")}>
           <Image source={require('@/assets/images/eliminarLocal.png')} style={styles.iconos}></Image>
           <View style={styles.contenedorTexto}>
             <Text style={styles.datosInfo}>Borrar Local</Text>
@@ -340,6 +346,17 @@ export default function PantallaAdmin() {
       {mostrarHoraCierre && (
         <DateTimePicker value={horaCierre} mode="time" display="spinner" is24Hour={true} onChange={cambiarHoraCierre}></DateTimePicker>
       )}
+      <Modal visible={alertaActualizar}
+        onRequestClose={() => setAlertaActualizar(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque3}>
+            <Image source={require('@/assets/images/editAlerta.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>Se ha creado el local correctamente</Text>
+          </View>
+        </View>
+      </Modal>
     </View>  
     
   );
@@ -360,6 +377,16 @@ const styles = StyleSheet.create({
   contenedorFoto:{
 
   },
+  textoNotificacion:{
+    fontSize:16
+  },
+  iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
+  },
   vistaFotos:{
     height:30,
     width:100,
@@ -367,6 +394,14 @@ const styles = StyleSheet.create({
   },
   textoSub:{
     fontSize:14
+  },
+  modalFondo2:{
+    backgroundColor:"rgba(0,0,0,0.2)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
   },
   marcadorTexto:{
     display:"flex",
@@ -499,6 +534,22 @@ const styles = StyleSheet.create({
     borderRadius:20,
     gap:10,
     alignItems:"center",
+  },
+  modalBloque3:{
+    display:"flex",
+    flexDirection:"row",
+    backgroundColor:"#FFFFFF",
+    paddingLeft:20,
+    paddingTop:5,
+    paddingBottom:5,
+    borderRadius:20,
+    gap:40,
+    width:350,
+    height:60,
+    marginTop:580,
+    alignContent:"flex-start",
+    justifyContent:"flex-start",
+    alignItems:"center"
   },
   contenedorBotones2:{
     display:"flex",
@@ -637,7 +688,8 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   textoBold:{
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    marginTop:20
   },
   containerFotos:{
     display: "flex",
@@ -648,6 +700,6 @@ const styles = StyleSheet.create({
   titulos:{
     fontWeight: 'bold',
     fontSize: 25,
-    alignSelf:"flex-start",
+    alignSelf:"center",
   }
 });

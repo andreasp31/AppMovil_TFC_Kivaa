@@ -30,7 +30,7 @@ interface Comentarios {
   fecha: string;
 }
 
-export default function PantallaPrincipal() {
+export default function PantallaAdLocal() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [nombreUsuario, setNombreUsuario] = useState('Usuario');
@@ -39,6 +39,10 @@ export default function PantallaPrincipal() {
   const [favoritos, setFavoritos] = useState<string[]>([]);
   const [alertaFav, setAlertaFav] = useState(false);
   const [alertaMensaje, setAlertaMensaje] = useState('');
+  const [modalVisible2, setModalVisible2] = useState(false);
+  const [reseñaSeleccionada, setReseñaSeleccionada] = useState<Comentarios | null>(null);
+  const [alertaBorrar, setAlertaBorrar] = useState(false);
+  const [modalCerrarSesion, setCerrarSesion] = useState(false);
   
   useEffect(() =>{
     const detallesLocal = async () => {
@@ -66,14 +70,6 @@ export default function PantallaPrincipal() {
           if(nombre){
             setNombreUsuario(nombre);
           }
-          if (usuarioId) {
-          const resultado = await axios.get(`http://10.0.2.2:3000/api/locales/favoritos/${usuarioId}`);
-          const idsFavoritos = resultado.data.map(
-            (local: Local) => local._id
-          );
-          setFavoritos(idsFavoritos);
-        }
-
         }
         catch(error){
           console.error("Error al cargar el nombre", error);
@@ -97,17 +93,12 @@ const manejarFavoritos = async (localId: string)=>{
     const usuarioId = await AsyncStorage.getItem("idUsuario");
     console.log("ID del Local enviado:", localId);
     console.log("ID del Usuario recuperado de AsyncStorage:", usuarioId);
-    const resultado = await axios.post("http://10.0.2.2:3000/api/locales/favorito",{
-      localId,
-      usuarioId
-    });
     if (favoritos.includes(localId)) {
       setFavoritos(favoritos.filter(id => id !== localId));
     } else {
       setFavoritos([...favoritos, localId]);
     }
     setAlertaFav(true);
-    setAlertaMensaje(resultado.data.message);
     setTimeout(() => {
       setAlertaFav(false);
     }, 1500);
@@ -119,6 +110,32 @@ const manejarFavoritos = async (localId: string)=>{
     setTimeout(() => {
       setAlertaFav(false);
     }, 2500);
+  }
+}
+
+  const borrarResena = async() => {
+  if (!reseñaSeleccionada) {
+    setAlertaMensaje("No se ha seleccionado ninguna reseña para editar.");
+    setAlertaBorrar(true);
+    return;
+  }
+  try{
+    const respuesta = await axios.delete(`http://10.0.2.2:3000/api/resenas/eliminar/${reseñaSeleccionada._id}`);
+    if (respuesta.status === 200) {
+      const comentariosFiltrados = comentarios.filter(item => item._id !== reseñaSeleccionada._id);
+      setComentarios(comentariosFiltrados);
+      setModalVisible2(false);
+      setReseñaSeleccionada(null);
+
+      setAlertaMensaje("Se ha borrado correctamente la reseña.");
+      setAlertaBorrar(true);
+      setTimeout(() => {
+        setAlertaBorrar(false);
+      }, 1500);
+    }
+  }
+  catch(error){
+    console.error("Error al borrar la reseña: ", error);
   }
 }
 
@@ -145,25 +162,15 @@ const manejarFavoritos = async (localId: string)=>{
       
       <TouchableOpacity style={styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
-        <View style={styles.contenedorCuenta}>
+        <TouchableOpacity style={styles.contenedorCuenta} onPress={() => setCerrarSesion(true)}>
           <Image source={require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
-        </View>
+        </TouchableOpacity>
       </TouchableOpacity>
 
       <View style={styles.contenedorGeneral}>
         <Image source={{ uri: local.foto }} style={styles.fotoTarjeta}></Image>
-        
-        <TouchableOpacity onPress={()=> manejarFavoritos(local._id)}>
-          <Image source={
-            favoritos.includes(local._id)
-              ? require('@/assets/images/iconoFavActivo.png')
-              : require('@/assets/images/favoritosOff.png')
-          }
-          style={styles.iconoFav}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push("/PantallaPrincipal")}>
+        <TouchableOpacity onPress={() => router.push("/PantallaAdResena")}>
             <Image source={require('@/assets/images/volver.png')} style={styles.iconoVolver}></Image>
         </TouchableOpacity>
         
@@ -196,10 +203,6 @@ const manejarFavoritos = async (localId: string)=>{
         <View style={styles.bloqueInferior}>
           <View style={styles.contenedorComentario}>
             <Text style={styles.tarjetaTitulo2}>Comentarios</Text>
-            <TouchableOpacity style={styles.contenedorResena}>
-              <Image source={require('@/assets/images/Plus.png')} style={styles.iconoMas}></Image>
-              <Text style={styles.tarjetatextoSec}>Reseña</Text>
-            </TouchableOpacity>
           </View>
 
           <ScrollView 
@@ -222,6 +225,10 @@ const manejarFavoritos = async (localId: string)=>{
                       <Text style={styles.textoDescripcion2}>"{item.comentario}"</Text>
                       <Text style={styles.textoDescripcion3}>{new Date(item.fecha).toLocaleDateString()}</Text>
                     </View>
+                    <TouchableOpacity style={styles.contenedorIcono} onPress={()=>{setReseñaSeleccionada(item);   
+                      setModalVisible2(true)}}>
+                      <Image source={require('@/assets/images/delete.png')} style={styles.iconoEditar}></Image>
+                    </TouchableOpacity>
                   </View>
                 ))
               )}
@@ -239,6 +246,55 @@ const manejarFavoritos = async (localId: string)=>{
           </View>
         </View>
       </Modal> 
+      <Modal visible={modalVisible2}
+        onRequestClose={() => setModalVisible2(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque3}>
+            <Text style={styles.textoBold2}>Reseña a { local ? local.nombre: "Borrar Reseña"}</Text>
+            <Text style={styles.textoDescripcion4}>¿Seguro que quieres borrar esta reseña?</Text>
+            <View style = {styles.contenedorBotones3}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setModalVisible2(false)}>
+                <Text>No, cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => borrarResena()}>
+                <Text>Sí, borrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={alertaBorrar}
+        onRequestClose={() => setAlertaBorrar(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo2}>
+          <View style={styles.modalBloque2}>
+            <Image source={require('@/assets/images/alertBorrar.png')} style={styles.iconoEdit}></Image>
+            <Text style={styles.textoNotificacion}>{alertaMensaje}</Text>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={modalCerrarSesion}
+        onRequestClose={() => setCerrarSesion(false)}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalBloque}>
+            <Text style={styles.titulo2}>Cerrar Sesión</Text>
+            <Text>¿Estás seguro de que quieres cerrar sesión?</Text>
+            <View style = {styles.contenedorBotones2}>
+              <TouchableOpacity style = {styles.Boton1} onPress={() => setCerrarSesion(false)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style = {styles.Boton2} onPress={() => router.push("/PantallaHome")}>
+                <Text>Salir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View> 
   );
 }
@@ -258,14 +314,80 @@ const styles = StyleSheet.create({
     gap:50,
     alignItems:"center",
     marginLeft:5
-    
+  },
+  titulo2:{
+    fontWeight: 'bold',
+    fontSize: 25,
+    alignSelf:"center",
+  },
+  modalBloque:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10
+  },
+  textoBold2:{
+    fontWeight: 'bold',
+    fontSize:18,
+  },
+  Boton1:{
+    borderWidth:1,
+    paddingHorizontal:25,
+    paddingVertical:10,
+    borderRadius:30
+  },
+  Boton2:{
+    paddingHorizontal:45,
+    paddingVertical:10,
+    borderRadius:30,
+    backgroundColor:"#FAD934"
+  },
+  contenedorIcono:{
+    alignSelf:"flex-end"
+  },
+   iconoEdit:{
+    height:30,
+    width:30,
+    position:"absolute",
+    marginTop: -40,
+    marginLeft:315
   },
   container3:{
     display:"flex",
   },
+  textoDescripcion4: { 
+    color:"#110501",    
+    fontSize: 14,
+    marginBottom: 5,
+    textAlign:"center"    
+  },
+  contenedorBotones2:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:55
+  },
+  contenedorBotones3:{
+    display:"flex",
+    flexDirection:"row",
+    marginTop:20,
+    gap:25
+  },
   contenedorEstrella:{
     display:"flex",
     flexDirection:"row",
+  },
+  modalBloque3:{
+    backgroundColor:"#FFFFFF",
+    padding:40,
+    borderRadius:20,
+    gap:10,
+    width:350,
+    display:"flex",
+    flexDirection:"column",
+    alignItems:"center",
+    alignContent:"center",
+    justifyContent:"center"
   },
   modalFondo2:{
     backgroundColor:"rgba(0,0,0,0.2)",
@@ -286,7 +408,7 @@ const styles = StyleSheet.create({
     gap:40,
     width:350,
     height:60,
-    marginTop:500,
+    marginTop:580,
     alignContent:"flex-start",
     justifyContent:"flex-start",
     alignItems:"center"
@@ -315,6 +437,14 @@ const styles = StyleSheet.create({
     flexDirection:"column",
     gap:5,
     flex: 1
+  },
+  modalFondo:{
+    backgroundColor:"rgba(0,0,0,0.5)",
+    display:"flex",
+    flexDirection:"column",
+    justifyContent:"center",
+    alignItems:"center",
+    height:750,
   },
   contenedor1:{
     flexDirection:"column",
@@ -351,8 +481,8 @@ const styles = StyleSheet.create({
     marginLeft:315
   },
   iconoEditar:{
-    height:15,
-    width:15
+    height:25,
+    width:25
   },
   textoDescripcion3: { 
     color:"#110501",     

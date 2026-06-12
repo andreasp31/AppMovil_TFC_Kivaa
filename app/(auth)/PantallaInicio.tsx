@@ -102,12 +102,6 @@ export default function HomeScreen() {
             <Text style={styles.textoEnlace}>regístrate</Text> 
           </TouchableOpacity>
         </View>
-        
-        <Image source={require('@/assets/images/separacion.png')} style={styles.icono3}></Image>
-        <TouchableOpacity style={styles.botonGoogle}>
-          <Image source={require('@/assets/images/logoGoogle.png')} style={styles.icono2}></Image>
-          <Text>Inicia Sesión con Google</Text>
-        </TouchableOpacity>
       </View>
     </View>  
   );
@@ -141,7 +135,8 @@ const styles = StyleSheet.create({
   },
   textoTitulo:{
     fontSize:25,
-    fontWeight:"bold"
+    fontWeight:"bold",
+    marginTop:10
   },
   input:{
     borderColor:"#110501",

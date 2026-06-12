@@ -205,7 +205,7 @@ const guardarResena = async() => {
       <TouchableOpacity style={styles.containerCabecera} onPress={() => router.push("/PantallaPerfil")}>
         <Image source={require('@/assets/images/logoKivaa.png')} style={styles.foto}></Image>
         <View style={styles.contenedorCuenta}>
-          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoPerfil.png')} style={styles.icono}></Image>
+          <Image key={fotoUsuario} source={fotoUsuario ? { uri: fotoUsuario } : require('@/assets/images/iconoCuenta.png')} style={styles.icono}></Image>
           <Text style={styles.textoDescripcion}>{nombreUsuario}</Text>
         </View>
       </TouchableOpacity>

@@ -93,11 +93,6 @@ export default function HomeScreen() {
       <View style={styles.container2}>
         <KivaaBoton titulo="Regístrate" onPress={registrar}></KivaaBoton>
         <Text style={styles.texto}>Si no tienes cuenta, <Text style={styles.textoEnlace} onPress={() => router.push("/PantallaInicio")}>inicia sesión</Text></Text>
-        <Image source={require('@/assets/images/separacion.png')} style={styles.icono3}></Image>
-        <TouchableOpacity style={styles.botonGoogle}>
-          <Image source={require('@/assets/images/logoGoogle.png')} style={styles.icono2}></Image>
-          <Text>Inicia Sesión con Google</Text>
-        </TouchableOpacity>
       </View>
       <Modal visible={alertaCrear}
         onRequestClose={() => setAlertaCrear(false)}
@@ -286,7 +281,8 @@ const styles = StyleSheet.create({
   },
   textoTitulo:{
     fontSize:25,
-    fontWeight:"bold"
+    fontWeight:"bold",
+    marginTop:15
   },
   icono3:{
     width:300,
